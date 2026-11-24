@@ -126,6 +126,8 @@ export class Editor {
       this.syncHistoryFlags();
       this.level = 'presets';
       this.cropping = false;
+      this.compare = false;
+      this.editingPreset = null;
       this.thumbs = new Map();
       if (this.renderer) {
         this.renderer.setSource(bitmap);
@@ -161,6 +163,7 @@ export class Editor {
 
   choosePreset(p: PresetRecipe | null): void {
     if ((p?.id ?? null) === (this.recipe.preset?.id ?? null)) return;
+    this.editingPreset = null;
     this.commit(applyPreset(this.recipe, p));
   }
 
@@ -173,16 +176,26 @@ export class Editor {
     this.commit(sliderModel(this.recipe, path, this.sliderTarget).apply(this.recipe, v), `param:${path}`);
   }
 
-  /** Parâmetros que o modo atual edita (camada do usuário ou receita do preset). */
+  /**
+   * Curvas e faixas HSL não são somas: editando o preset ou com a receita
+   * achatada, mexem direto na receita do preset (valor absoluto).
+   */
+  private get editsPresetStructures(): boolean {
+    return !!this.recipe.preset && (this.sliderTarget === 'preset' || !!this.recipe.flattened);
+  }
+
   private targetParams(): PartialParams {
-    return (this.sliderTarget === 'preset' ? this.recipe.preset?.params : this.recipe.user) ?? {};
+    return (this.editsPresetStructures ? this.recipe.preset?.params : this.recipe.user) ?? {};
   }
 
   private withTargetParams(params: PartialParams): Recipe {
     const r = this.recipe;
-    if (this.sliderTarget === 'preset' && r.preset) return { ...r, preset: { ...r.preset, params } };
+    if (this.editsPresetStructures && r.preset) return { ...r, preset: { ...r.preset, params } };
     return { ...r, user: params };
   }
+
+  /** Faixas destravadas pelo preset (na camada do usuário não dá para travá-las de volta). */
+  hslBandsFromPreset = $derived(!this.editsPresetStructures && !!this.recipe.preset?.params.hslBands);
 
   /** Curva do modo atual (identidade = sem curva). */
   curve(ch: CurveChannel): Curve | undefined {
@@ -203,7 +216,7 @@ export class Editor {
   hslBands(): Record<HslBand, HslBandShape> | null {
     const own = this.targetParams().hslBands;
     const fromPreset = this.recipe.preset?.params.hslBands;
-    const b = own ?? (this.sliderTarget === 'layer' ? fromPreset : undefined);
+    const b = own ?? (this.editsPresetStructures ? undefined : fromPreset);
     return b ? { ...defaultHslBands(), ...(b as Record<HslBand, HslBandShape>) } : null;
   }
 
@@ -237,12 +250,16 @@ export class Editor {
   /** Salva a receita editada: preset local é atualizado; oficial vira uma cópia "(meu)". */
   async saveEditedPreset(): Promise<void> {
     const p = this.recipe.preset;
-    if (!p) return;
+    const editing = this.editingPreset;
+    const photoId = this.photo?.id;
+    if (!p || !editing) return;
     try {
       const saved = await this.catalog.save(p);
+      void this.renderThumbs({ refresh: [saved.id] });
+      // A foto ou o modo podem ter mudado enquanto gravava: só atualiza se não.
+      if (this.photo?.id !== photoId || this.editingPreset !== editing) return;
       this.editingPreset = null;
-      this.commit({ ...this.recipe, preset: structuredClone(saved) });
-      void this.renderThumbs(true);
+      if (this.recipe.preset?.id === p.id) this.commit({ ...this.recipe, preset: structuredClone(saved) });
     } catch (e) {
       this.error = `Não foi possível salvar o preset: ${e instanceof Error ? e.message : String(e)}`;
     }
@@ -261,7 +278,7 @@ export class Editor {
       const created = await this.catalog.createFrom(flat, name);
       // A foto passa a usar o preset novo, sem ajustes por cima: mesmo resultado.
       this.commit({ ...this.recipe, preset: structuredClone(created), intensity: 1, user: {}, flattened: false });
-      void this.renderThumbs(true);
+      void this.renderThumbs({ refresh: [created.id] });
     } catch (e) {
       this.error = `Não foi possível criar o preset: ${e instanceof Error ? e.message : String(e)}`;
     }
@@ -282,6 +299,7 @@ export class Editor {
 
   private travel(recipe: Recipe): void {
     const cropChanged = recipe.crop !== this.recipe.crop;
+    if (this.editingPreset && recipe.preset?.id !== this.editingPreset.id) this.editingPreset = null;
     this.recipe = recipe;
     this.syncHistoryFlags();
     this.scheduleSave();
@@ -357,9 +375,11 @@ export class Editor {
 
   /**
    * Miniaturas de todos os presets, renderizadas na própria foto (com o
-   * recorte), proxy de ~160 px. `onlyMissing`: só as que faltam (preset novo).
+   * recorte), proxy de ~160 px. Com `onlyMissing` ou `refresh`, mantém as
+   * que já existem e renderiza só as que faltam e as pedidas (preset editado).
    */
-  async renderThumbs(onlyMissing = false): Promise<void> {
+  async renderThumbs(opts: { onlyMissing?: boolean; refresh?: string[] } = {}): Promise<void> {
+    const onlyMissing = !!opts.onlyMissing || !!opts.refresh;
     const presets = this.catalog.items.map((i) => i.preset);
     const size = this.thumbSize();
     if (!this.renderer || !this.photo || !size) return;
@@ -370,7 +390,10 @@ export class Editor {
     // Pack visível primeiro.
     const pack = this.catalog.pack;
     const ordered = [...presets].sort((a, b) => Number(b.pack === pack) - Number(a.pack === pack));
-    const out = new Map<string, ImageData>(onlyMissing ? this.thumbs : []);
+    // Só guarda miniaturas de presets que ainda existem.
+    const ids = new Set(presets.map((p) => p.id));
+    const out = new Map<string, ImageData>(onlyMissing ? [...this.thumbs].filter(([id]) => ids.has(id)) : []);
+    for (const id of opts.refresh ?? []) out.delete(id);
     for (const p of ordered) {
       if (out.has(p.id)) continue;
       if (p.lut) await loadLut(p.lut.src).catch(() => null);

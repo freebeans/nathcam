@@ -16,6 +16,18 @@ import type { PresetLut } from '../engine/recipe';
 
 /** Lado máximo das LUTs guardadas no aparelho (memória e IndexedDB). */
 export const MAX_LUT_SIZE = 65;
+/** Hald de nível 12 = imagem de 1728 px, cubo 144³: o máximo que vale a pena decodificar no celular. */
+export const MAX_HALD_LEVEL = 12;
+/** Maior arquivo de preset aceito na importação. */
+export const MAX_IMPORT_BYTES = 32 * 1024 * 1024;
+
+/** Confere as dimensões antes de decodificar os pixels. */
+export function checkHaldSize(width: number, height: number): void {
+  const level = Math.round(Math.cbrt(width));
+  if (width !== height || level ** 3 !== width || level < 2)
+    throw new Error(`A imagem (${width}x${height}) não é uma HaldCLUT: esperado um quadrado de L³ pixels de lado.`);
+  if (level > MAX_HALD_LEVEL) throw new Error(`HaldCLUT grande demais (nível ${level}; o máximo é ${MAX_HALD_LEVEL}).`);
+}
 
 /** Trilinear: reamostra a LUT para `n` pontos por eixo. */
 export function resampleLut(lut: Lut3D, n: number): Lut3D {
@@ -50,9 +62,8 @@ export function resampleLut(lut: Lut3D, n: number): Lut3D {
  * lado L², com o vermelho variando mais rápido.
  */
 export function haldToLut(px: Uint8Array | Uint8ClampedArray, width: number, height: number): Lut3D {
+  checkHaldSize(width, height);
   const level = Math.round(Math.cbrt(width));
-  if (width !== height || level ** 3 !== width || level < 2)
-    throw new Error(`A imagem (${width}x${height}) não é uma HaldCLUT: esperado um quadrado de L³ pixels de lado.`);
   const n = level * level;
   const data = new Float32Array(n * n * n * 3);
   for (let i = 0; i < n * n * n; i++) {
@@ -145,6 +156,7 @@ export function parsePresetJson(text: string, fileName: string): ImportedPreset 
     const ok = typeof l.src === 'string' && /^luts\/[\w.-]+\.cube$/.test(l.src) && (l.colorSpace === 'srgb' || l.colorSpace === 'display-p3');
     if (!ok) throw new Error(`${fileName}: LUT inválida (só LUTs oficiais, em luts/*.cube, podem ser referenciadas).`);
     lut = { src: l.src as string, colorSpace: l.colorSpace as PresetLut['colorSpace'] };
+    if (typeof l.amount === 'number' && l.amount >= 0 && l.amount <= 1) lut.amount = l.amount;
   }
   const { params, ignored } = sanitizeParams(raw.params);
   return {

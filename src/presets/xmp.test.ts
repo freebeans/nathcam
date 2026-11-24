@@ -38,7 +38,7 @@ const LR_CLASSIC = `<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 
    crs:GrainSize="30"
    crs:GrainFrequency="50"
    crs:PostCropVignetteAmount="-18"
-   crs:Sharpness="40"
+   crs:Sharpness="60"
    crs:RedHue="+6"
    crs:RedSaturation="+10"
    crs:BlueHue="-15"
@@ -137,7 +137,7 @@ describe('parseXmp', () => {
   });
 
   it('mapeia efeitos, nitidez e calibração', () => {
-    expect(r.params).toMatchObject({ grain: 22, grainSize: 30, vignette: -18, sharpening: 40 });
+    expect(r.params).toMatchObject({ grain: 22, grainSize: 30, vignette: -18, sharpening: 60 });
     expect(r.params.calibration).toEqual({ red: { hue: 6, sat: 10 }, blue: { hue: -15, sat: 20 }, shadowsTint: 5 });
   });
 
@@ -181,5 +181,29 @@ describe('parseXmp', () => {
 
   it('limita valores fora da faixa', () => {
     expect(parseXmp('<x crs:Exposure2012="+9" crs:Contrast2012="300"/>', 'a.xmp').params).toMatchObject({ exposure: 5, contrast: 100 });
+  });
+});
+
+describe('parseXmp: valores malformados e padrões do Lightroom', () => {
+  it('descarta curvas com números inválidos e ordena os pontos', () => {
+    const bad = parseXmp('<x crs:Exposure2012="+1"><crs:ToneCurvePV2012><rdf:Seq><rdf:li>1.2.3, 4</rdf:li><rdf:li>255, 255</rdf:li></rdf:Seq></crs:ToneCurvePV2012></x>', 'a.xmp');
+    expect(bad.params.curves).toBeUndefined();
+    const unsorted = parseXmp('<x crs:Exposure2012="+1"><crs:ToneCurvePV2012><rdf:Seq><rdf:li>255, 240</rdf:li><rdf:li>0, 10</rdf:li></rdf:Seq></crs:ToneCurvePV2012></x>', 'a.xmp');
+    expect(unsorted.params.curves?.luma?.[0][0]).toBe(0);
+  });
+
+  it('tamanho do grão só vale com grão; nitidez no padrão do Lightroom (40) não é importada', () => {
+    const p = parseXmp('<x crs:GrainAmount="0" crs:GrainSize="60" crs:Sharpness="40"/>', 'a.xmp').params;
+    expect(p.grainSize).toBeUndefined();
+    expect(p.sharpening).toBeUndefined();
+    expect(parseXmp('<x crs:Sharpness="70"/>', 'a.xmp').params.sharpening).toBe(70);
+  });
+});
+
+describe('haldToLut: limites', () => {
+  it('recusa Halds maiores que o nível 12', async () => {
+    const { haldToLut, MAX_HALD_LEVEL } = await import('./import');
+    const side = (MAX_HALD_LEVEL + 1) ** 3;
+    expect(() => haldToLut(new Uint8Array(4), side, side)).toThrow(/grande/);
   });
 });

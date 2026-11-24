@@ -118,3 +118,10 @@ describe('parsePresetJson', () => {
     expect(parsePresetJson('{"params":{}}', 'Look 2.json').name).toBe('Look 2');
   });
 });
+
+describe('parsePresetJson: amount da LUT', () => {
+  it('preserva lut.amount de um preset achatado', () => {
+    const p = parsePresetJson(JSON.stringify({ name: 'A', params: {}, lut: { src: 'luts/a.cube', colorSpace: 'srgb', amount: 0.4 } }), 'a.json');
+    expect(p.lut).toEqual({ src: 'luts/a.cube', colorSpace: 'srgb', amount: 0.4 });
+  });
+});

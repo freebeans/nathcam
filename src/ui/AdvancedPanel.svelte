@@ -63,9 +63,17 @@
       <ParamSlider {editor} path="hsl.{band}.sat" label="Saturação" />
       <ParamSlider {editor} path="hsl.{band}.lum" label="Luminância" />
       <label class="toggle">
-        <input type="checkbox" checked={!!bands} onchange={(e) => editor.setHslUnlocked(e.currentTarget.checked)} />
+        <input
+          type="checkbox"
+          checked={!!bands}
+          disabled={editor.hslBandsFromPreset}
+          onchange={(e) => editor.setHslUnlocked(e.currentTarget.checked)}
+        />
         Destravar faixas
       </label>
+      {#if editor.hslBandsFromPreset}
+        <p class="note">As faixas vêm destravadas do preset; para travá-las, edite o preset.</p>
+      {/if}
       {#if bands}
         {@const shape = bands[band]}
         <p class="note">Com faixas destravadas, o preset deixa de ser compatível com XMP.</p>

@@ -79,3 +79,24 @@ describe('PresetStore', () => {
     expect((await store.prefs()).favorites.has(p.id)).toBe(false);
   });
 });
+
+describe('LUT usada por fotos', () => {
+  it('apagar o preset mantém a LUT se alguma foto (receita ou histórico) ainda a usa', async () => {
+    const p = await store.create(base(), { lut, colorSpace: 'srgb' });
+    const recipe = { engineVersion: 1, preset: p, intensity: 1, user: {} };
+    await db.recipes.put({ photoId: 'foto', recipe, updatedAt: 0 });
+    await store.remove(p.id);
+    await expect(store.getLut(p.lut!.src)).resolves.toBeTruthy();
+
+    await db.recipes.clear();
+    await db.history.put({ photoId: 'foto', snapshot: { entries: [recipe], index: 0 } });
+    const q = await store.create({ ...base(), lut: p.lut });
+    await store.remove(q.id);
+    await expect(store.getLut(p.lut!.src)).resolves.toBeTruthy();
+
+    await db.history.clear();
+    const r = await store.create({ ...base(), lut: p.lut });
+    await store.remove(r.id);
+    await expect(store.getLut(p.lut!.src)).rejects.toThrow();
+  });
+});

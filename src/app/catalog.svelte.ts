@@ -107,22 +107,25 @@ export class PresetCatalog {
    * somente leitura: salvar a partir deles cria uma cópia "(meu)".
    */
   async save(p: PresetRecipe): Promise<PresetRecipe> {
-    if (this.isLocal(p.id)) {
-      await this.store.update(p);
+    const stored = this.local.find((x) => x.id === p.id);
+    if (stored) {
+      // Nome e pack podem ter mudado (renomear) enquanto a receita era editada.
+      const updated = { ...p, name: stored.name, pack: stored.pack };
+      await this.store.update(updated);
       await this.refreshLocal();
-      return p;
+      return updated;
     }
-    const { id: _, ...rest } = p;
-    const created = await this.store.create({ ...rest, name: `${p.name} (meu)`, pack: MY_PACK });
-    await this.refreshLocal();
-    this.pack = MY_PACK;
-    return created;
+    return this.createInMyPack(p, `${p.name} (meu)`);
   }
 
   /** Cria um preset novo a partir de uma receita achatada. */
-  async createFrom(p: PresetRecipe, name: string): Promise<PresetRecipe> {
+  createFrom(p: PresetRecipe, name: string): Promise<PresetRecipe> {
+    return this.createInMyPack(p, name.trim() || 'Sem nome');
+  }
+
+  private async createInMyPack(p: PresetRecipe, name: string): Promise<PresetRecipe> {
     const { id: _, ...rest } = p;
-    const created = await this.store.create({ ...rest, name: name.trim() || 'Sem nome', pack: MY_PACK });
+    const created = await this.store.create({ ...rest, name, pack: MY_PACK });
     await this.refreshLocal();
     this.pack = MY_PACK;
     return created;

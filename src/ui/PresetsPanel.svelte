@@ -42,7 +42,7 @@
     importing = true;
     try {
       await catalog.import(files);
-      await editor.renderThumbs(true);
+      await editor.renderThumbs({ onlyMissing: true });
     } finally {
       importing = false;
     }

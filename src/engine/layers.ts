@@ -2,6 +2,7 @@ import {
   CURVE_CHANNELS,
   GRADING_ZONES,
   NUMERIC_PARAMS,
+  NUMERIC_PARAM_BY_PATH,
   clampParam,
   defaultHslBands,
   getPath,
@@ -45,18 +46,6 @@ export function scaleCurve(curve: Curve, k: number): Curve {
   return curve.map(([x, y]) => [x, x + (y - x) * k] as const);
 }
 
-function toVec(hue: number, sat: number): [number, number] {
-  const a = (hue * Math.PI) / 180;
-  return [Math.cos(a) * sat, Math.sin(a) * sat];
-}
-
-function fromVec([x, y]: [number, number], fallbackHue: number): { hue: number; sat: number } {
-  const sat = Math.hypot(x, y);
-  if (sat < 1e-9) return { hue: fallbackHue, sat: 0 };
-  const hue = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-  return { hue, sat };
-}
-
 /**
  * Resolve as duas camadas de uma receita (preset escalado pela intensidade +
  * ajustes do usuário) num único conjunto de parâmetros efetivos.
@@ -76,17 +65,16 @@ export function resolveEffective(recipe: Recipe): Effective {
     setPath(out, s.path, clampParam(s, v));
   }
 
-  // Color grading: matiz e saturação formam um vetor no plano de cor.
+  // Color grading: a matiz é uma direção (não escala com a intensidade); se o
+  // usuário escolheu uma, ela vale. As saturações somam.
   for (const z of GRADING_ZONES) {
-    const ph = num(getPath(presetParams, `colorGrading.${z}.hue`)) ?? 0;
+    const ph = num(getPath(presetParams, `colorGrading.${z}.hue`));
     const ps = num(getPath(presetParams, `colorGrading.${z}.sat`)) ?? 0;
-    const uh = num(getPath(user, `colorGrading.${z}.hue`)) ?? ph;
+    const uh = num(getPath(user, `colorGrading.${z}.hue`));
     const us = num(getPath(user, `colorGrading.${z}.sat`)) ?? 0;
-    const a = toVec(ph, ps * k);
-    const b = toVec(uh, us);
-    const { hue, sat } = fromVec([a[0] + b[0], a[1] + b[1]], us > 0 ? uh : ph);
+    const hue = clampParam(NUMERIC_PARAM_BY_PATH.get(`colorGrading.${z}.hue`)!, uh ?? ph ?? 0);
     setPath(out, `colorGrading.${z}.hue`, hue);
-    setPath(out, `colorGrading.${z}.sat`, Math.min(100, sat));
+    setPath(out, `colorGrading.${z}.sat`, Math.min(100, Math.max(0, ps * k + us)));
   }
 
   const curveLayers = {} as Record<CurveChannel, Curve[]>;

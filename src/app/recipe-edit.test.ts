@@ -117,6 +117,15 @@ describe('flattenRecipe', () => {
     for (let i = 0; i < before.length; i += 16) expect(after[i]).toBeCloseTo(before[i], 2);
   });
 
+  it('o preset achatado tem identidade própria (não é mais o preset de origem)', () => {
+    expect(flat.preset?.id).not.toBe('c1');
+    expect(flat.preset?.pack).toBe('meus');
+  });
+
+  it('escolher outro preset depois de achatar volta às camadas', () => {
+    expect(applyPreset(flat, p1).flattened).toBe(false);
+  });
+
   it('sem preset nem ajustes, achatar não cria preset', () => {
     expect(flattenRecipe(emptyRecipe()).preset).toBeNull();
   });

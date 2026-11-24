@@ -6,6 +6,7 @@
  * Perfil de câmera, correções de lente, máscaras e recorte são ignorados.
  */
 import { HSL_BANDS, NUMERIC_PARAM_BY_PATH, clampParam, setPath, type CurvePoint, type PartialParams } from '../engine/params';
+import { sanitizeParams } from './import';
 
 export interface XmpPreset {
   name: string;
@@ -59,6 +60,8 @@ const CURVES: [lr: string, ours: string][] = [
   ['ToneCurvePV2012Blue', 'blue'],
 ];
 
+const LR_DEFAULT_SHARPNESS = 40;
+
 /** Luz do dia: referência para converter temperatura absoluta (Kelvin) em relativa. */
 const DAYLIGHT_K = 5500;
 
@@ -79,10 +82,12 @@ function readText(text: string, tag: string, values: Map<string, string>): strin
 function readCurve(text: string, tag: string): CurvePoint[] | undefined {
   const m = text.match(new RegExp(`<crs:${tag}>([\\s\\S]*?)</crs:${tag}>`));
   if (!m) return undefined;
-  const pts = [...m[1].matchAll(/<rdf:li>\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*<\/rdf:li>/g)].map(
-    ([, x, y]) => [Number(x) / 255, Number(y) / 255] as const,
-  );
-  if (pts.length < 2 || pts.every(([x, y]) => Math.abs(x - y) < 1e-6)) return undefined;
+  const pts = [...m[1].matchAll(/<rdf:li>\s*([^,<]+?)\s*,\s*([^<]+?)\s*<\/rdf:li>/g)]
+    .map(([, x, y]) => [Number(x) / 255, Number(y) / 255] as const)
+    .sort((a, b) => a[0] - b[0]);
+  // Pontos inválidos invalidam a curva inteira (sanitizeParams confere a faixa).
+  if (pts.length < 2 || pts.some(([x, y]) => !Number.isFinite(x) || !Number.isFinite(y))) return undefined;
+  if (pts.every(([x, y]) => Math.abs(x - y) < 1e-6)) return undefined;
   return pts;
 }
 
@@ -103,6 +108,12 @@ export function parseXmp(text: string, fileName: string): XmpPreset {
   };
 
   for (const [lr, ours] of Object.entries(DIRECT)) put(ours, num(lr));
+  // Tamanho do grão só tem efeito com grão.
+  if (!num('GrainAmount')) delete params.grainSize;
+  // 40 é a nitidez de captura padrão do Lightroom em RAW, não uma escolha do preset.
+  if (num('Sharpness') === LR_DEFAULT_SHARPNESS) delete params.sharpening;
+  // Preto e branco: sem a mistura de canais do Lightroom, vira saturação -100.
+  if (/^true$/i.test(v.get('ConvertToGrayscale') ?? '')) params.saturation = -100;
 
   // Temperatura e tonalidade absolutas (presets de RAW): aproximação em mireds.
   if (num('IncrementalTemperature') === undefined && num('Temperature') !== undefined) {
@@ -146,11 +157,18 @@ export function parseXmp(text: string, fileName: string): XmpPreset {
   if (nonzero('Dehaze')) ignored.push('desembaçar');
   if (nonzero('ParametricShadows', 'ParametricDarks', 'ParametricLights', 'ParametricHighlights')) ignored.push('curva paramétrica');
   if (nonzero('ColorGradeGlobalSat', 'ColorGradeGlobalLum')) ignored.push('color grading global');
+  if (/^true$/i.test(v.get('ConvertToGrayscale') ?? '') && [...v.keys()].some((k) => k.startsWith('GrayMixer') && nonzero(k)))
+    ignored.push('mistura de preto e branco');
+  const notDefault = (k: string, d: number) => num(k) !== undefined && num(k) !== d;
+  if (num('GrainAmount') && notDefault('GrainFrequency', 50)) ignored.push('aspereza do grão');
+  if (num('PostCropVignetteAmount') && (notDefault('PostCropVignetteMidpoint', 50) || notDefault('PostCropVignetteFeather', 50)))
+    ignored.push('ponto médio/difusão da vinheta');
 
   return {
     name: readText(text, 'Name', v) ?? fileName.replace(/\.xmp$/i, ''),
     group: readText(text, 'Group', v),
-    params: params as PartialParams,
+    // Mesma validação dos .json: tipos, faixas e curvas dentro de 0..1.
+    params: sanitizeParams(params).params,
     ignored,
   };
 }

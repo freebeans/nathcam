@@ -50,15 +50,20 @@ export class PresetStore {
 
   /** Apaga o preset, suas preferências e a LUT local, se nenhum outro preset a usa. */
   async remove(id: string): Promise<void> {
-    await this.db.transaction('rw', this.db.presets, this.db.luts, this.db.presetMeta, async () => {
-      const p = await this.db.presets.get(id);
-      await this.db.presets.delete(id);
-      await this.db.presetMeta.delete(`preset:${id}`);
+    const { presets, luts, presetMeta, recipes, history } = this.db;
+    await this.db.transaction('rw', [presets, luts, presetMeta, recipes, history], async () => {
+      const p = await presets.get(id);
+      await presets.delete(id);
+      await presetMeta.delete(`preset:${id}`);
       const src = p?.lut?.src;
-      if (src?.startsWith(LOCAL_LUT_PREFIX)) {
-        const stillUsed = (await this.db.presets.toArray()).some((x) => x.lut?.src === src);
-        if (!stillUsed) await this.db.luts.delete(src.slice(LOCAL_LUT_PREFIX.length));
-      }
+      if (!src?.startsWith(LOCAL_LUT_PREFIX)) return;
+      // Fotos guardam cópia da receita do preset: a LUT fica enquanto alguma usar.
+      const usedBy = (r: { preset: { lut?: { src: string } | null } | null }) => r.preset?.lut?.src === src;
+      const stillUsed =
+        (await presets.toArray()).some((x) => x.lut?.src === src) ||
+        (await recipes.toArray()).some((x) => usedBy(x.recipe)) ||
+        (await history.toArray()).some((x) => x.snapshot.entries.some(usedBy));
+      if (!stillUsed) await luts.delete(src.slice(LOCAL_LUT_PREFIX.length));
     });
   }
 

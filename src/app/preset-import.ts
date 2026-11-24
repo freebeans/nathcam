@@ -6,7 +6,7 @@
 import { parseCube, type Lut3D } from '../engine/cube';
 import type { PresetRecipe } from '../engine/recipe';
 import { ENGINE_VERSION } from '../engine/version';
-import { MAX_LUT_SIZE, haldToLut, parsePresetJson, resampleLut } from '../presets/import';
+import { MAX_IMPORT_BYTES, MAX_LUT_SIZE, checkHaldSize, haldToLut, parsePresetJson, resampleLut } from '../presets/import';
 import { parseXmp } from '../presets/xmp';
 import type { PresetStore } from './preset-store';
 
@@ -25,6 +25,8 @@ const baseName = (name: string) => name.replace(/\.[^.]+$/, '');
 async function decodeHald(file: File): Promise<Lut3D> {
   const bmp = await createImageBitmap(file, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
   try {
+    // Antes de alocar os pixels: Halds enormes derrubariam o Safari do iPhone.
+    checkHaldSize(bmp.width, bmp.height);
     const c = new OffscreenCanvas(bmp.width, bmp.height);
     const ctx = c.getContext('2d', { colorSpace: 'srgb' })!;
     ctx.drawImage(bmp, 0, 0);
@@ -36,6 +38,7 @@ async function decodeHald(file: File): Promise<Lut3D> {
 
 async function importOne(file: File, store: PresetStore, notes: string[]): Promise<PresetRecipe> {
   const ext = file.name.toLowerCase().split('.').pop();
+  if (file.size > MAX_IMPORT_BYTES) throw new Error(`${file.name}: arquivo grande demais (máximo ${MAX_IMPORT_BYTES >> 20} MB).`);
   const blank = { pack: IMPORT_PACK, params: {}, lut: null, engineVersion: ENGINE_VERSION };
   switch (ext) {
     case 'json': {

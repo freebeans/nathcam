@@ -121,7 +121,7 @@
   {#if editor.cropping && size}
     <CropOverlay {editor} width={size.w / dpr} height={size.h / dpr} />
   {/if}
-  {#if editor.compare && !editor.cropping && size}
+  {#if editor.compare && editor.level === 'advanced' && !editor.cropping && size}
     <CompareOverlay {editor} w={size.w} h={size.h} {dpr} />
   {/if}
   {#if editor.showOriginal}

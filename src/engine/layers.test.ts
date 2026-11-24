@@ -49,7 +49,7 @@ describe('resolveEffective', () => {
     expect(eff.params.contrast).toBe(100);
   });
 
-  it('color grading soma como vetores no plano de cor, sem escalar a matiz', () => {
+  it('color grading: a matiz do usuário define a direção e as saturações somam; a intensidade não escala a matiz', () => {
     const p = { ...preset, params: { colorGrading: { shadows: { hue: 200, sat: 40 } } } };
     const half = resolveEffective(recipe({ preset: p, intensity: 0.5 }));
     expect(half.params.colorGrading.shadows.hue).toBeCloseTo(200);
@@ -60,9 +60,16 @@ describe('resolveEffective', () => {
     expect(same.params.colorGrading.shadows.hue).toBeCloseTo(200);
     expect(same.params.colorGrading.shadows.sat).toBeCloseTo(50);
 
-    // matiz oposta com mesma força: cancelam
-    const opposite = resolveEffective(recipe({ preset: p, user: { colorGrading: { shadows: { hue: 20, sat: 40 } } } }));
-    expect(opposite.params.colorGrading.shadows.sat).toBeCloseTo(0);
+    // a matiz do usuário define a direção, mesmo sem saturação própria
+    const turned = resolveEffective(recipe({ preset: p, user: { colorGrading: { shadows: { hue: 20 } } } }));
+    expect(turned.params.colorGrading.shadows.hue).toBeCloseTo(20);
+    expect(turned.params.colorGrading.shadows.sat).toBeCloseTo(40);
+  });
+
+  it('saturação do usuário pode tirar a cor do preset', () => {
+    const p = { ...preset, params: { colorGrading: { highlights: { hue: 50, sat: 30 } } } };
+    const out = resolveEffective(recipe({ preset: p, user: { colorGrading: { highlights: { sat: -30 } } } }));
+    expect(out.params.colorGrading.highlights.sat).toBeCloseTo(0);
   });
 
   it('curvas viram camadas: preset escalado pela intensidade e, por cima, a do usuário', () => {

@@ -74,7 +74,7 @@ Um preset é uma receita completa em JSON: parâmetros de todos os ajustes, uma 
 
 **Edição do preset:**
 
-- *Achatar:* funde preset e ajustes numa só camada naquela foto; sliders passam a mostrar valores absolutos.
+- *Achatar:* funde preset e ajustes numa só camada naquela foto; sliders passam a mostrar valores absolutos. A LUT continua aplicada com a mesma força, guardada em `lut.amount` (0–1) na receita achatada.
 - *Editar o preset:* modo em que os sliders mexem na receita do preset. Presets do servidor são somente leitura: editar cria uma cópia local ("C1 (meu)").
 - Fotos guardam uma cópia da receita do preset aplicado, então editar um preset depois não altera fotos já editadas.
 

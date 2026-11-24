@@ -12,6 +12,10 @@ import {
 } from '../engine/params';
 import type { PresetRecipe, Recipe } from '../engine/recipe';
 import { ENGINE_VERSION } from '../engine/version';
+import { MY_PACK } from '../presets/organize';
+
+/** Prefixo do id de uma receita achatada: não coincide com nenhum preset salvo. */
+export const FLATTENED_ID_PREFIX = 'achatado:';
 
 export function emptyRecipe(): Recipe {
   return { engineVersion: ENGINE_VERSION, preset: null, intensity: 1, user: {} };
@@ -19,7 +23,7 @@ export function emptyRecipe(): Recipe {
 
 /** Troca o preset; ajustes do usuário e recorte ficam. Guarda uma cópia da receita. */
 export function applyPreset(r: Recipe, preset: PresetRecipe | null): Recipe {
-  return { ...r, preset: preset ? structuredClone(preset) : null, intensity: 1 };
+  return { ...r, preset: preset ? structuredClone(preset) : null, intensity: 1, flattened: false };
 }
 
 function withoutPath(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
@@ -71,8 +75,9 @@ export function fitSize(srcW: number, srcH: number, boxW: number, boxH: number, 
 
 /**
  * Achatar: funde preset (já escalado pela intensidade) e ajustes do usuário
- * numa receita de preset só. O resultado renderiza igual; a LUT guarda a
- * mistura de antes em `amount`.
+ * numa receita de preset só, própria desta foto (não é mais o preset de
+ * origem). Renderiza igual, exceto curvas, reamostradas em 17 pontos; a LUT
+ * guarda a mistura de antes em `amount`.
  */
 export function flattenRecipe(r: Recipe): Recipe {
   if (!r.preset && Object.keys(r.user).length === 0) return { ...r, flattened: true };
@@ -89,9 +94,9 @@ export function flattenRecipe(r: Recipe): Recipe {
   if (eff.params.hslBands) params.hslBands = eff.params.hslBands;
   const lut = r.preset?.lut && eff.lut ? { ...r.preset.lut, amount: eff.lut.mix } : null;
   const preset: PresetRecipe = {
-    id: r.preset?.id ?? 'achatado',
+    id: `${FLATTENED_ID_PREFIX}${r.preset?.id ?? 'ajustes'}`,
     name: r.preset?.name ?? 'Achatado',
-    pack: r.preset?.pack ?? 'meus',
+    pack: MY_PACK,
     params: params as PartialParams,
     lut,
     engineVersion: ENGINE_VERSION,
