@@ -2,7 +2,23 @@
   import type { Gallery } from '../app/gallery.svelte';
   import type { PhotoRecord } from '../app/library';
 
-  let { gallery, onopen, onimport }: { gallery: Gallery; onopen: (p: PhotoRecord) => void; onimport: () => void } = $props();
+  let {
+    gallery,
+    batch,
+    canPaste,
+    onopen,
+    onimport,
+    onpaste,
+    onmenu,
+  }: {
+    gallery: Gallery;
+    batch: { done: number; total: number } | null;
+    canPaste: boolean;
+    onopen: (p: PhotoRecord) => void;
+    onimport: () => void;
+    onpaste: () => void;
+    onmenu: () => void;
+  } = $props();
 
   // URLs das miniaturas, recriadas quando a lista muda.
   let urls = $state.raw<Map<string, string>>(new Map());
@@ -35,10 +51,16 @@
     {:else}
       <button class="link" disabled={!gallery.photos.length} onclick={() => gallery.setSelecting(true)}>Selecionar</button>
       <span class="title">nathcam</span>
-      <button class="link" onclick={onimport}>Importar</button>
+      <span class="right">
+        <button class="link" aria-label="Backup dos presets" onclick={onmenu}>⋯</button>
+        <button class="link" onclick={onimport}>Importar</button>
+      </span>
     {/if}
   </header>
 
+  {#if batch}
+    <p class="muted status">Colando ajustes… {batch.done}/{batch.total}</p>
+  {/if}
   {#if gallery.importing > 0}
     <p class="muted status">Importando… {gallery.importing}</p>
   {/if}
@@ -70,6 +92,14 @@
       {/each}
     </div>
   {/if}
+
+  {#if gallery.selecting}
+    <div class="selbar">
+      <button class="link" disabled={!canPaste || !gallery.selected.size || !!batch} onclick={onpaste}>
+        {canPaste ? `Colar ajustes${gallery.selected.size ? ` (${gallery.selected.size})` : ''}` : 'Copie ajustes de uma foto para colar'}
+      </button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -92,6 +122,16 @@
     font-size: 14px;
     letter-spacing: 0.12em;
     color: var(--muted);
+  }
+  .right {
+    display: flex;
+    gap: 16px;
+  }
+  .selbar {
+    display: flex;
+    justify-content: center;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: var(--panel);
   }
   .danger {
     color: var(--error);

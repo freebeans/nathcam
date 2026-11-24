@@ -7,6 +7,9 @@
   import { PresetCatalog } from '../app/catalog.svelte';
   import { PresetStore } from '../app/preset-store';
   import AdvancedPanel from './AdvancedPanel.svelte';
+  import PasteSheet from './PasteSheet.svelte';
+  import BackupSheet from './BackupSheet.svelte';
+  import type { PasteGroupId } from '../app/paste';
   import Viewer from './Viewer.svelte';
   import PresetsPanel from './PresetsPanel.svelte';
   import BasicPanel from './BasicPanel.svelte';
@@ -21,6 +24,29 @@
   const gallery = new Gallery(library, () => editor.renderer?.caps.maxTextureSize ?? 4096);
   let fileInput: HTMLInputElement;
   let exporting = $state(false);
+  let menu = $state(false);
+  let backup = $state(false);
+  /** Onde colar: na foto aberta ou nas selecionadas da biblioteca. */
+  let pasting = $state<'here' | 'selected' | null>(null);
+  let batch = $state<{ done: number; total: number } | null>(null);
+
+  async function paste(groups: ReadonlySet<PasteGroupId>) {
+    const where = pasting;
+    pasting = null;
+    if (where === 'here') return editor.pasteHere(groups);
+    const recs = gallery.photos.filter((p) => gallery.selected.has(p.id));
+    batch = { done: 0, total: recs.length };
+    try {
+      const errors = await editor.pasteInto(recs, groups, (done) => (batch = { done, total: recs.length }));
+      gallery.error = errors.length ? errors.join('\n') : null;
+    } catch (e) {
+      gallery.error = e instanceof Error ? e.message : String(e);
+    } finally {
+      batch = null;
+      gallery.setSelecting(false);
+      await gallery.refresh();
+    }
+  }
   let view = $state<'library' | 'editor'>('library');
 
   onMount(() => {
@@ -81,7 +107,10 @@
         Recorte
       </button>
     </span>
-    <button class="link" disabled={!editor.photo || editor.cropping} onclick={() => (exporting = true)}>Exportar</button>
+    <span class="tools">
+      <button class="icon" aria-label="Mais ações" disabled={!editor.photo || editor.cropping} onclick={() => (menu = true)}>⋯</button>
+      <button class="link" disabled={!editor.photo || editor.cropping} onclick={() => (exporting = true)}>Exportar</button>
+    </span>
   </header>
 
   <Viewer {editor} />
@@ -137,12 +166,48 @@
   {/if}
 
   {#if view === 'library'}
-    <LibraryView {gallery} onopen={openPhoto} onimport={() => fileInput.click()} />
+    <LibraryView
+      {gallery}
+      {batch}
+      canPaste={!!editor.copied}
+      onopen={openPhoto}
+      onimport={() => fileInput.click()}
+      onpaste={() => (pasting = 'selected')}
+      onmenu={() => (backup = true)}
+    />
   {/if}
 </div>
 
 {#if exporting}
   <ExportSheet {editor} onclose={() => (exporting = false)} />
+{/if}
+
+{#if menu}
+  <div class="backdrop" role="presentation" onclick={() => (menu = false)}></div>
+  <div class="sheet" role="dialog" aria-label="Mais ações">
+    <button
+      onclick={() => {
+        editor.copy();
+        menu = false;
+      }}>Copiar ajustes</button
+    >
+    <button
+      disabled={!editor.copied}
+      onclick={() => {
+        menu = false;
+        pasting = 'here';
+      }}>Colar ajustes…</button
+    >
+    <button class="muted" onclick={() => (menu = false)}>Cancelar</button>
+  </div>
+{/if}
+
+{#if backup}
+  <BackupSheet {db} {catalog} onclose={() => (backup = false)} />
+{/if}
+
+{#if pasting}
+  <PasteSheet count={pasting === 'selected' ? gallery.selected.size : 1} onconfirm={paste} oncancel={() => (pasting = null)} />
 {/if}
 
 <style>
@@ -231,6 +296,31 @@
   .levels .compare.active {
     color: var(--bg);
     background: var(--fg);
+  }
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10;
+  }
+  .sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 11;
+    background: var(--panel);
+    border-radius: 14px 14px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .sheet button {
+    text-align: left;
+    padding: 12px 0;
+    font-size: 15px;
   }
   .error {
     margin: 0 16px 8px;

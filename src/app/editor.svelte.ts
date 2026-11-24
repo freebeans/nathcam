@@ -10,6 +10,7 @@ import { LIBRARY_THUMB_SIDE, decodeImage, thumbFromPixels, type Photo } from './
 import type { CurveChannel, Curve, HslBand, HslBandShape, PartialParams } from '../engine/params';
 import { defaultHslBands } from '../engine/params';
 import type { PresetCatalog } from './catalog.svelte';
+import { pasteRecipe, type PasteGroupId } from './paste';
 import { loadLut, lutIfLoaded } from './presets';
 import { applyPreset, emptyRecipe, fitSize, flattenRecipe, sliderModel, type SliderTarget } from './recipe-edit';
 
@@ -34,6 +35,8 @@ export class Editor {
   busy = $state(false);
   canUndo = $state(false);
   canRedo = $state(false);
+  /** Ajustes copiados, prontos para colar nesta ou em outras fotos. */
+  copied = $state.raw<Recipe | null>(null);
   /** Antes/depois com divisória (nível 3). */
   compare = $state(false);
   /** Editando a receita do preset: guarda a cópia de antes para cancelar. */
@@ -84,7 +87,8 @@ export class Editor {
   /** Proporção travada do recorte (largura/altura em pixels), ou livre. Vem da receita. */
   cropAspect = $derived(this.recipe.crop?.aspect ?? null);
 
-  frameFor(recipe: Recipe): Frame {
+  /** `size`: dimensões da fonte carregada no motor (padrão: a foto aberta). */
+  frameFor(recipe: Recipe, size: { width: number; height: number } | null = this.photo): Frame {
     const eff = resolveEffective(recipe);
     let lut = null;
     if (eff.lut) {
@@ -95,8 +99,7 @@ export class Editor {
           (e) => (this.error = String(e)),
         );
     }
-    const p = this.photo;
-    const srcXform = p && recipe.crop ? cropTransform(p.width, p.height, recipe.crop) : undefined;
+    const srcXform = size && recipe.crop ? cropTransform(size.width, size.height, recipe.crop) : undefined;
     return { data: toUniformData(eff), lut, srcXform };
   }
 
@@ -149,6 +152,64 @@ export class Editor {
     this.photo = null;
     this.cropping = false;
     this.thumbJob++;
+  }
+
+  // ---- copiar e colar
+
+  copy(): void {
+    this.copied = structuredClone(this.recipe);
+  }
+
+  /** Cola na foto aberta (um passo no histórico). */
+  pasteHere(groups: ReadonlySet<PasteGroupId>): void {
+    const p = this.photo;
+    if (!this.copied || !p) return;
+    this.commit(pasteRecipe(this.recipe, this.copied, groups, { w: p.width, h: p.height }));
+    void this.renderThumbs();
+  }
+
+  /**
+   * Cola em várias fotos da biblioteca: cada uma ganha um passo no histórico
+   * e a miniatura editada. Usa o motor, então só roda com o editor fechado.
+   */
+  async pasteInto(recs: PhotoRecord[], groups: ReadonlySet<PasteGroupId>, onProgress?: (done: number) => void): Promise<string[]> {
+    const source = this.copied;
+    const r = this.renderer;
+    if (!source || !r) return [];
+    if (this.photo) throw new Error('Feche a foto aberta antes de colar em lote.');
+    const errors: string[] = [];
+    for (let i = 0; i < recs.length; i++) {
+      const rec = recs[i];
+      try {
+        const edit = await this.library.loadEdit(rec.id);
+        const history = History.restore(edit.history, edit.recipe);
+        const next = pasteRecipe(history.current, source, groups, { w: rec.width, h: rec.height });
+        history.push(next);
+        const thumb = await this.renderPhotoThumb(rec, next);
+        await this.library.saveEdit(rec.id, next, history.snapshot(), thumb);
+      } catch (e) {
+        errors.push(`${rec.name}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      onProgress?.(i + 1);
+    }
+    return errors;
+  }
+
+  /** Miniatura da biblioteca de uma foto qualquer (carrega uma versão pequena no motor). */
+  private async renderPhotoThumb(rec: PhotoRecord, recipe: Recipe): Promise<Blob> {
+    const r = this.renderer!;
+    const eff = resolveEffective(recipe);
+    if (eff.lut) await loadLut(eff.lut.src);
+    // Fonte pequena: rápido de decodificar; o recorte é normalizado, então vale igual.
+    const bmp = await decodeImage(rec.original, rec.name, LIBRARY_THUMB_SIDE * 2);
+    try {
+      r.setSource(bmp);
+      const out = cropOutputSize(bmp.width, bmp.height, recipe.crop);
+      const { w, h } = fitSize(out.w, out.h, LIBRARY_THUMB_SIDE, LIBRARY_THUMB_SIDE, LIBRARY_THUMB_SIDE);
+      return await thumbFromPixels(r.read(this.frameFor(recipe, bmp), w, h), w, h);
+    } finally {
+      bmp.close();
+    }
   }
 
   // ---- edição (tudo passa por commit, que alimenta o histórico e a gravação)
