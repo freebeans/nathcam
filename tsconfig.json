@@ -5,7 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "vite/client", "vite-plugin-pwa/svelte", "@vitest/browser-playwright"],
+    "types": ["node", "vite/client", "vite-plugin-pwa/client", "@vitest/browser-playwright"],
     "strict": true,
     "noUncheckedIndexedAccess": false,
     "noEmit": true,

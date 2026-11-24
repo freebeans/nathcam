@@ -49,6 +49,8 @@ interface Target {
   mips: boolean;
 }
 
+/** Pré-visualização (a, b) + miniaturas (a, b, out) + folga. */
+const MAX_TARGETS = 6;
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const UNIT = { src: 0, curves: 1, lut: 2, a: 3, b: 4 } as const;
 
@@ -94,7 +96,8 @@ export class Renderer {
   private identityCurves: WebGLTexture;
   private dummyLut: WebGLTexture;
   private luts = new WeakMap<Lut3D, WebGLTexture>();
-  private targets: Partial<Record<'a' | 'b' | 'out', Target>> = {};
+  /** Alvos intermediários por papel e tamanho (pré-visualização e miniaturas alternam). */
+  private targets = new Map<string, Target>();
   private vao: WebGLVertexArrayObject;
 
   constructor(readonly canvas: HTMLCanvasElement | OffscreenCanvas) {
@@ -104,7 +107,7 @@ export class Renderer {
       depth: false,
       stencil: false,
       premultipliedAlpha: false,
-      preserveDrawingBuffer: true,
+      preserveDrawingBuffer: false,
     }) as GL | null;
     if (!gl) throw new Error('WebGL2 não está disponível neste navegador.');
     this.gl = gl;
@@ -225,14 +228,13 @@ export class Renderer {
 
   /** Libera as texturas intermediárias (útil após exportar em tamanho grande). */
   releaseTargets(): void {
-    for (const k of ['a', 'b', 'out'] as const) {
-      const t = this.targets[k];
-      if (t) {
-        this.gl.deleteTexture(t.tex);
-        this.gl.deleteFramebuffer(t.fbo);
-      }
-      delete this.targets[k];
-    }
+    for (const t of this.targets.values()) this.deleteTarget(t);
+    this.targets.clear();
+  }
+
+  private deleteTarget(t: Target): void {
+    this.gl.deleteTexture(t.tex);
+    this.gl.deleteFramebuffer(t.fbo);
   }
 
   dispose(): void {
@@ -369,13 +371,20 @@ export class Renderer {
     }
   }
 
-  private target(key: 'a' | 'b' | 'out', w: number, h: number, format: number, mips: boolean): Target {
+  private target(role: 'a' | 'b' | 'out', w: number, h: number, format: number, mips: boolean): Target {
     const gl = this.gl;
-    const cur = this.targets[key];
-    if (cur && cur.w === w && cur.h === h) return cur;
+    const key = `${role}:${w}x${h}`;
+    const cur = this.targets.get(key);
     if (cur) {
-      gl.deleteTexture(cur.tex);
-      gl.deleteFramebuffer(cur.fbo);
+      // Reinsere para marcar como usado recentemente.
+      this.targets.delete(key);
+      this.targets.set(key, cur);
+      return cur;
+    }
+    while (this.targets.size >= MAX_TARGETS) {
+      const [oldest, t] = this.targets.entries().next().value!;
+      this.deleteTarget(t);
+      this.targets.delete(oldest);
     }
     const tex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -392,7 +401,7 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     if (status !== gl.FRAMEBUFFER_COMPLETE) throw new Error(`Framebuffer incompleto (${status}) para ${key} ${w}x${h}`);
     const t = { tex, fbo, w, h, mips };
-    this.targets[key] = t;
+    this.targets.set(key, t);
     return t;
   }
 

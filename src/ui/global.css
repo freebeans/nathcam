@@ -1,0 +1,61 @@
+:root {
+  --bg: #111;
+  --panel: #1a1a1a;
+  --fg: #f2f2f2;
+  --muted: #8a8a8a;
+  --track: #3a3a3a;
+  --error: #ff8a7a;
+  color-scheme: dark;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  overscroll-behavior: none;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button.link {
+  font-size: 15px;
+  padding: 6px 0;
+}
+button.primary,
+button.secondary {
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+}
+button.primary {
+  background: var(--fg);
+  color: var(--bg);
+}
+button.secondary {
+  background: var(--track);
+  color: var(--fg);
+}
