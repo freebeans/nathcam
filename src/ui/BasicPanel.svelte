@@ -1,12 +1,10 @@
 <script lang="ts">
   import type { Editor } from '../app/editor.svelte';
-  import { NUMERIC_PARAM_BY_PATH } from '../engine/params';
-  import { userDeltaRange, userValue } from '../app/recipe-edit';
-  import Slider from './Slider.svelte';
+  import ParamSlider from './ParamSlider.svelte';
 
   let { editor }: { editor: Editor } = $props();
 
-  /** Nível 2 do PRD. Os sliders mostram a camada do usuário, relativa ao preset. */
+  /** Nível 2 do PRD. */
   const CONTROLS: { path: string; label: string }[] = [
     { path: 'exposure', label: 'Exposição' },
     { path: 'contrast', label: 'Contraste' },
@@ -26,16 +24,7 @@
 
 <div class="basic">
   {#each CONTROLS as c (c.path)}
-    {@const spec = NUMERIC_PARAM_BY_PATH.get(c.path)!}
-    {@const [min, max] = userDeltaRange(spec)}
-    <Slider
-      label={c.label}
-      value={userValue(editor.recipe, c.path)}
-      {min}
-      {max}
-      step={spec.step}
-      onchange={(v) => editor.setParam(c.path, v)}
-    />
+    <ParamSlider {editor} path={c.path} label={c.label} />
   {/each}
 </div>
 

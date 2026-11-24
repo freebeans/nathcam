@@ -4,6 +4,9 @@
   import { Gallery } from '../app/gallery.svelte';
   import { Library, type PhotoRecord } from '../app/library';
   import { Db } from '../app/db';
+  import { PresetCatalog } from '../app/catalog.svelte';
+  import { PresetStore } from '../app/preset-store';
+  import AdvancedPanel from './AdvancedPanel.svelte';
   import Viewer from './Viewer.svelte';
   import PresetsPanel from './PresetsPanel.svelte';
   import BasicPanel from './BasicPanel.svelte';
@@ -13,14 +16,15 @@
 
   const db = new Db();
   const library = new Library(db);
-  const editor = new Editor(library);
+  const catalog = new PresetCatalog(new PresetStore(db));
+  const editor = new Editor(library, catalog);
   const gallery = new Gallery(library, () => editor.renderer?.caps.maxTextureSize ?? 4096);
   let fileInput: HTMLInputElement;
   let exporting = $state(false);
   let view = $state<'library' | 'editor'>('library');
 
   onMount(() => {
-    void editor.init();
+    void catalog.init().then(() => editor.renderThumbs());
     void gallery.refresh();
     // O iOS pode encerrar a PWA em segundo plano: grava o que estiver pendente.
     const onHide = () => document.visibilityState === 'hidden' && void editor.flush();
@@ -98,18 +102,35 @@
       {#if editor.cropping}
         <CropPanel {editor} />
       {:else}
+        {#if editor.editingPreset}
+          <div class="editing" role="status">
+            <span>Editando <b>{editor.recipe.preset?.name}</b>: os sliders mudam o preset.</span>
+            <span class="editing-actions">
+              <button class="link" onclick={() => editor.cancelEditPreset()}>Cancelar</button>
+              <button class="link strong" onclick={() => editor.saveEditedPreset()}>
+                {catalog.isLocal(editor.recipe.preset?.id ?? '') ? 'Salvar' : 'Salvar cópia'}
+              </button>
+            </span>
+          </div>
+        {/if}
         {#if editor.level === 'presets'}
           <PresetsPanel {editor} />
-        {:else}
+        {:else if editor.level === 'basic'}
           <BasicPanel {editor} />
+        {:else}
+          <AdvancedPanel {editor} />
         {/if}
         <div class="levels" role="tablist">
-          <button role="tab" aria-selected={editor.level === 'presets'} class:active={editor.level === 'presets'} onclick={() => (editor.level = 'presets')}>
-            Presets
-          </button>
-          <button role="tab" aria-selected={editor.level === 'basic'} class:active={editor.level === 'basic'} onclick={() => (editor.level = 'basic')}>
-            Básico
-          </button>
+          {#each [['presets', 'Presets'], ['basic', 'Básico'], ['advanced', 'Avançado']] as const as [lv, label] (lv)}
+            <button role="tab" aria-selected={editor.level === lv} class:active={editor.level === lv} onclick={() => (editor.level = lv)}>
+              {label}
+            </button>
+          {/each}
+          {#if editor.level === 'advanced'}
+            <button class="compare" class:active={editor.compare} aria-pressed={editor.compare} onclick={() => (editor.compare = !editor.compare)}>
+              Antes/depois
+            </button>
+          {/if}
         </div>
       {/if}
     </section>
@@ -180,6 +201,36 @@
   }
   .levels button.active {
     color: var(--fg);
+  }
+  .editing {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 16px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--track);
+    font-size: 13px;
+  }
+  .editing-actions {
+    display: flex;
+    gap: 16px;
+  }
+  .strong {
+    font-weight: 600;
+  }
+  .compare {
+    color: var(--muted);
+    font-size: 13px;
+    border: 1px solid var(--track);
+    border-radius: 999px;
+    padding: 2px 10px;
+  }
+  .levels .compare.active {
+    color: var(--bg);
+    background: var(--fg);
   }
   .error {
     margin: 0 16px 8px;

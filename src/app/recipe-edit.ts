@@ -133,6 +133,11 @@ export function sliderModel(r: Recipe, path: string, target: SliderTarget): Slid
       },
     };
   }
+  if (spec.kind === 'hue') {
+    // Matiz é direção, não intensidade: absoluta; a do usuário prevalece.
+    const uv = getPath(r.user, path);
+    return { ...abs, value: typeof uv === 'number' ? uv : presetValue, apply: (rr, v) => setUserParam(rr, path, v) };
+  }
   if (r.flattened) {
     return { ...abs, value: presetValue + user, apply: (rr, v) => setUserParam(rr, path, v - presetValue) };
   }

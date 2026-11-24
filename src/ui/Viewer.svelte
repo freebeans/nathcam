@@ -4,6 +4,7 @@
   import type { Editor } from '../app/editor.svelte';
   import { fitSize } from '../app/recipe-edit';
   import CropOverlay from './CropOverlay.svelte';
+  import CompareOverlay from './CompareOverlay.svelte';
 
   let { editor }: { editor: Editor } = $props();
 
@@ -119,6 +120,9 @@
   ></canvas>
   {#if editor.cropping && size}
     <CropOverlay {editor} width={size.w / dpr} height={size.h / dpr} />
+  {/if}
+  {#if editor.compare && !editor.cropping && size}
+    <CompareOverlay {editor} w={size.w} h={size.h} {dpr} />
   {/if}
   {#if editor.showOriginal}
     <span class="badge">Original</span>

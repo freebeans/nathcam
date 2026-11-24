@@ -186,6 +186,72 @@ try {
   await page.getByRole('button', { name: 'Recorte', exact: true }).click();
   check(await page.getByRole('button', { name: '1:1' }).evaluate((b) => b.classList.contains('active')), 'proporção travada (1:1) restaurada');
   await page.getByRole('button', { name: 'Concluir' }).click();
+
+  // ---- nível 3
+  await page.getByRole('tab', { name: 'Avançado' }).click();
+  const curveBox = await page.locator('.curves svg').boundingBox();
+  await page.mouse.click(curveBox.x + curveBox.width * 0.5, curveBox.y + curveBox.height * 0.3);
+  check(await page.getByRole('button', { name: 'Luz •' }).isVisible(), 'curva: tocar adiciona um ponto');
+  await page.getByRole('tab', { name: 'HSL' }).click();
+  await page.getByLabel('Destravar faixas').check();
+  check(await page.getByText('Centro').isVisible(), 'HSL: destravar faixas mostra centro/largura/suavidade');
+  await page.getByRole('button', { name: 'Antes/depois' }).click();
+  check(await page.locator('.compare .tag.before').isVisible(), 'antes/depois com divisória');
+  if (screenshots) await page.screenshot({ path: join(screenshots, 'advanced.png') });
+  await page.getByRole('button', { name: 'Antes/depois' }).click();
+
+  // ---- importar presets (.cube, .xmp, HaldCLUT .png)
+  await page.getByRole('tab', { name: 'Presets' }).click();
+  const fx = (f) => join(root, 'tests', 'fixtures', 'presets', f);
+  await page.locator('input[type=file][accept*=".cube"]').setInputFiles([fx('teste-quente.cube'), fx('teste-filme.xmp'), fx('teste-hald.png')]);
+  await page.getByRole('button', { name: 'Teste Quente' }).waitFor({ timeout: 30_000 });
+  check(await page.getByRole('button', { name: 'Teste Filme' }).isVisible(), 'XMP importado');
+  check(await page.getByRole('button', { name: 'teste-hald' }).isVisible(), 'HaldCLUT importada');
+  check(await page.getByText(/desembaçar/).isVisible(), 'avisa o que o XMP tinha e foi ignorado');
+  await page.getByRole('button', { name: 'Teste Quente' }).click();
+  await page.getByText('Intensidade · Teste Quente').waitFor();
+  check(true, 'preset com LUT local aplicado');
+  if (screenshots) await page.screenshot({ path: join(screenshots, 'imported.png') });
+
+  // ---- favoritar (segurar / clique direito)
+  await page.getByRole('button', { name: 'Teste Filme' }).click({ button: 'right' });
+  await page.getByRole('button', { name: 'Favoritar' }).click();
+  const favOk = await page
+    .getByRole('button', { name: '★ Teste Filme' })
+    .waitFor({ timeout: 5_000 })
+    .then(() => true, () => false);
+  const firstTile = await page.locator('.grid .tile .name').nth(1).textContent();
+  check(favOk && firstTile === '★ Teste Filme', `favorito marcado e no topo (primeiro: ${firstTile})`);
+
+  // ---- editar preset oficial cria cópia local
+  await page.getByRole('tab', { name: 'cssco' }).click();
+  await page.getByRole('button', { name: 'C1', exact: true }).click();
+  await page.getByRole('button', { name: 'Editar preset' }).click();
+  await page.getByText('os sliders mudam o preset').waitFor();
+  await page.evaluate(() => {
+    const i = document.querySelector('.basic input[type=range]');
+    i.value = '0.8';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.getByRole('button', { name: 'Salvar cópia' }).click();
+  await page.getByRole('tab', { name: 'Presets' }).click();
+  await page.getByRole('button', { name: 'C1 (meu)' }).waitFor({ timeout: 10_000 });
+  check(await page.getByRole('tab', { name: 'meus' }).getAttribute('aria-selected') === 'true', 'editar o C1 oficial criou "C1 (meu)" em "meus"');
+
+  // ---- achatar
+  await page.getByRole('button', { name: 'Achatar' }).click();
+  check(await page.getByText(/Achatado/).isVisible(), 'achatar: sliders passam a valores absolutos');
+  await page.getByRole('tab', { name: 'Básico' }).click();
+  const expVal = await page.locator('.basic .slider').first().locator('.value').textContent();
+  check(expVal === '+0.80', `exposição absoluta depois de achatar (${expVal})`);
+
+  // ---- presets locais persistem
+  await page.waitForTimeout(700);
+  await page.reload();
+  await page.getByRole('button', { name: 'photo-12mp-exif.jpg' }).click();
+  await page.getByRole('tab', { name: 'importados' }).click();
+  check(await page.getByRole('button', { name: 'Teste Quente' }).isVisible(), 'presets importados continuam depois de recarregar');
+  check(await page.getByText(/Achatado/).isVisible(), 'receita achatada persistida');
   await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
 
   // ---- apagar

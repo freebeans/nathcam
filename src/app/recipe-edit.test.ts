@@ -154,3 +154,16 @@ describe('sliderModel', () => {
     expect(sliderModel({ ...r, flattened: true }, 'grainSize', 'layer')).toMatchObject({ value: 25, neutral: 25 });
   });
 });
+
+describe('sliderModel: matiz do color grading', () => {
+  it('é sempre um ângulo absoluto 0..360, mesmo na camada do usuário', () => {
+    const preset: PresetRecipe = {
+      id: 'p', name: 'P', pack: 'x', engineVersion: 1, lut: null,
+      params: { colorGrading: { shadows: { hue: 200, sat: 30 } } },
+    };
+    const r = { ...emptyRecipe(), preset };
+    const m = sliderModel(r, 'colorGrading.shadows.hue', 'layer');
+    expect(m).toMatchObject({ value: 200, min: 0, max: 360 });
+    expect(m.apply(r, 120).user.colorGrading?.shadows?.hue).toBe(120);
+  });
+});
