@@ -12,6 +12,7 @@ import { Renderer } from './renderer';
 import type { Lut3D } from './cube';
 import { srgbToLinear } from './color';
 import { diffStats, frame, testImage } from './test-utils';
+import { cropOutputSize, cropTransform, fullCrop, straightenCrop } from './crop';
 
 declare const __UPDATE_REFS__: boolean;
 
@@ -167,6 +168,42 @@ describe('motor', () => {
     } finally {
       big.dispose();
     }
+  });
+});
+
+describe('recorte', () => {
+  it('recortar a metade esquerda dá os mesmos pixels da renderização inteira', () => {
+    const full = renderer.read(frame({}), W, H);
+    const c = { ...fullCrop(), w: 0.5 };
+    const half = renderer.read({ ...frame({}), srcXform: cropTransform(W, H, c) }, W / 2, H);
+    const left = new Uint8Array((W / 2) * H * 4);
+    for (let y = 0; y < H; y++) left.set(full.subarray(y * W * 4, y * W * 4 + (W / 2) * 4), (y * W) / 2 * 4);
+    expect(diffStats(half, left).max).toBeLessThanOrEqual(3);
+  });
+
+  it('um quarto de volta gira os pixels', () => {
+    const full = renderer.read(frame({}), W, H);
+    const c = { ...fullCrop(), quarterTurns: 1 };
+    const out = cropOutputSize(W, H, c);
+    expect(out).toEqual({ w: H, h: W });
+    const rot = renderer.read({ ...frame({}), srcXform: cropTransform(W, H, c) }, out.w, out.h);
+    // saída (x, y) vem da fonte (y, H - 1 - x)
+    let max = 0;
+    for (const [x, y] of [[0, 0], [10, 50], [100, 200], [H - 1, W - 1]]) {
+      const so = ((H - 1 - x) * W + y) * 4;
+      const ro = (y * out.w + x) * 4;
+      for (let k = 0; k < 3; k++) max = Math.max(max, Math.abs(rot[ro + k] - full[so + k]));
+    }
+    expect(max).toBeLessThanOrEqual(3);
+  });
+
+  it('endireitado em tiles continua igual ao inteiro', async () => {
+    const c = straightenCrop(W, H, fullCrop(), 6);
+    const size = cropOutputSize(W, H, c);
+    const f = { ...frame({ clarity: 40, grain: 30 }), srcXform: cropTransform(W, H, c) };
+    const whole = renderer.read(f, size.w, size.h);
+    const tiled = await renderer.readTiled(f, size.w, size.h, 64);
+    expect(diffStats(whole, tiled).max).toBeLessThanOrEqual(1);
   });
 });
 

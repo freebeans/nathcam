@@ -93,7 +93,7 @@ Um único motor WebGL2, escrito em TypeScript puro e sem dependência da interfa
 
 **Ordem do pipeline** (cada etapa em P3 linear, salvo indicação):
 
-1. Decodificação e conversão para P3 linear (respeitando o perfil ICC de origem).
+1. Decodificação e conversão para P3 linear (respeitando o perfil ICC de origem). O recorte, o endireitamento, os giros e o espelho entram aqui, como uma transformação do ponto amostrado na fonte; as etapas seguintes já veem a imagem recortada.
 2. Calibração aproximada: matiz e saturação dos primários R, G, B e tom das sombras.
 3. Balanço de branco: temperatura e tonalidade.
 4. Tom: exposição, contraste, altas luzes, sombras, brancos, pretos.

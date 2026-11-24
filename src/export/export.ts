@@ -58,12 +58,13 @@ export function finalizeJpeg(
 export async function exportJpeg(
   renderer: Renderer,
   frame: Frame,
+  /** Tamanho da imagem de saída (já recortada) em pixels da fonte. */
+  output: { w: number; h: number },
   original: Uint8Array | null,
   opts: ExportOptions,
   onProgress?: (fraction: number) => void,
 ): Promise<Blob> {
-  const src = renderer.sourceSize;
-  const { w, h } = exportSize(src.w, src.h, opts.maxSide);
+  const { w, h } = exportSize(output.w, output.h, opts.maxSide);
   const pixels = await renderer.readTiled(frame, w, h, 2048, (d, t) => onProgress?.((0.7 * d) / t));
   const jpeg = await encodeJpeg(pixels, w, h, opts.quality);
   onProgress?.(0.95);

@@ -28,7 +28,7 @@ describe('exportação JPEG', () => {
 
   it('é visualmente idêntica à pré-visualização e leva o perfil Display P3', async () => {
     const f = frame({ contrast: 30, temperature: 25, clarity: 30, vignette: -30, saturation: 15 });
-    const blob = await exportJpeg(renderer, f, null, { quality: 95, maxSide: 4096, stripLocation: true });
+    const blob = await exportJpeg(renderer, f, { w: 320, h: 240 }, null, { quality: 95, maxSide: 4096, stripLocation: true });
     const bytes = new Uint8Array(await blob.arrayBuffer());
 
     const icc = readSegments(bytes).find((s) => s.marker === 0xe2);

@@ -150,6 +150,49 @@ try {
   }
   await page.getByRole('button', { name: 'Fechar' }).click();
 
+  // ---- recorte, desfazer e refazer
+  const canvasDims = () =>
+    page.evaluate(() => {
+      const c = document.querySelector('.viewer canvas');
+      return { w: c.width, h: c.height };
+    });
+  await page.getByRole('button', { name: 'Recorte', exact: true }).click();
+  await page.getByRole('button', { name: '1:1' }).click();
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  await page.waitForTimeout(300);
+  let d = await canvasDims();
+  check(Math.abs(d.w - d.h) <= 1, `recorte 1:1 aplicado (${d.w}x${d.h})`);
+  if (screenshots) await page.screenshot({ path: join(screenshots, 'crop.png') });
+  await page.getByRole('button', { name: 'Desfazer' }).click();
+  await page.waitForTimeout(300);
+  d = await canvasDims();
+  check(d.h > d.w, 'desfazer volta ao enquadramento anterior');
+  await page.getByRole('button', { name: 'Refazer' }).click();
+  await page.waitForTimeout(300);
+  d = await canvasDims();
+  check(Math.abs(d.w - d.h) <= 1, 'refazer reaplica o recorte');
+
+  // ---- biblioteca persistente
+  await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
+  await page.getByRole('button', { name: 'photo-12mp-exif.jpg' }).waitFor();
+  check(await page.locator('.cell .dot').isVisible(), 'foto aparece como editada na biblioteca');
+  await page.reload();
+  await page.getByRole('button', { name: 'photo-12mp-exif.jpg' }).click();
+  await page.getByText('Intensidade · C1').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(300);
+  d = await canvasDims();
+  check(Math.abs(d.w - d.h) <= 1, 'depois de recarregar, preset e recorte continuam lá');
+  check(await page.getByRole('button', { name: 'Desfazer' }).isEnabled(), 'histórico persistido');
+  await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
+
+  // ---- apagar
+  page.once('dialog', (dlg) => dlg.accept());
+  await page.getByRole('button', { name: 'Selecionar' }).click();
+  await page.getByRole('button', { name: 'photo-12mp-exif.jpg' }).click();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await page.getByRole('button', { name: 'Abrir foto' }).waitFor();
+  check(true, 'apagar remove a foto da biblioteca');
+
   // ---- offline
   await page.evaluate(() => navigator.serviceWorker.ready);
   await context.setOffline(true);

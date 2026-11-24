@@ -5,11 +5,6 @@
 
   let { editor }: { editor: Editor } = $props();
 
-  let none = $derived.by(() => {
-    void editor.photo;
-    void editor.thumbs;
-    return editor.originalThumb();
-  });
   let selected = $derived(editor.recipe.preset?.id ?? null);
 </script>
 
@@ -38,7 +33,7 @@
 
   <div class="grid">
     <button class="tile" class:active={selected === null} onclick={() => editor.choosePreset(null)}>
-      <span class="img"><Thumb image={none} /></span>
+      <span class="img"><Thumb image={editor.originalThumb} /></span>
       <span class="name">Original</span>
     </button>
     {#each editor.presetsInPack as p (p.id)}

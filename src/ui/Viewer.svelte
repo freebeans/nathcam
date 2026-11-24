@@ -3,6 +3,7 @@
   import { Renderer } from '../engine/renderer';
   import type { Editor } from '../app/editor.svelte';
   import { fitSize } from '../app/recipe-edit';
+  import CropOverlay from './CropOverlay.svelte';
 
   let { editor }: { editor: Editor } = $props();
 
@@ -16,10 +17,14 @@
   /** Lado maior máximo da pré-visualização (memória do Safari iOS). */
   const PREVIEW_MAX_SIDE = 2048;
 
+  /** Folga em volta da foto no modo de recorte, para as alças não ficarem na borda da tela. */
+  const CROP_MARGIN = 24;
+
   let size = $derived.by(() => {
-    const p = editor.photo;
-    if (!p || !boxW || !boxH) return null;
-    return fitSize(p.width, p.height, boxW * dpr, boxH * dpr, PREVIEW_MAX_SIDE);
+    const d = editor.displaySize;
+    if (!d || !boxW || !boxH) return null;
+    const m = editor.cropping ? CROP_MARGIN * 2 : 0;
+    return fitSize(d.w, d.h, (boxW - m) * dpr, (boxH - m) * dpr, PREVIEW_MAX_SIDE);
   });
 
   onMount(() => {
@@ -80,6 +85,7 @@
   let holdStart: { x: number; y: number } | null = null;
 
   function startHold(e: PointerEvent) {
+    if (editor.cropping) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     holdStart = { x: e.clientX, y: e.clientY };
     clearTimeout(holdTimer);
@@ -111,6 +117,9 @@
     oncontextmenu={(e) => e.preventDefault()}
     aria-label="Foto. Segure para ver o original."
   ></canvas>
+  {#if editor.cropping && size}
+    <CropOverlay {editor} width={size.w / dpr} height={size.h / dpr} />
+  {/if}
   {#if editor.showOriginal}
     <span class="badge">Original</span>
   {/if}

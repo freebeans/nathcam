@@ -15,6 +15,11 @@ export interface ExifOptions {
 
 const TYPE_SIZE: Record<number, number> = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8 };
 
+const TAG_MAKE = 0x010f;
+const TAG_MODEL = 0x0110;
+const TAG_DATETIME = 0x0132;
+const TAG_DATETIME_ORIGINAL = 0x9003;
+const TAG_LENS_MODEL = 0xa434;
 const TAG_ORIENTATION = 0x0112;
 const TAG_EXIF_IFD = 0x8769;
 const TAG_GPS_IFD = 0x8825;
@@ -80,6 +85,15 @@ class Tiff {
   nextIfdOffset(ifd: number): number {
     return ifd + 2 + this.u16(ifd) * 12;
   }
+  /** Texto ASCII de uma entrada (tipo 2). */
+  ascii(e: { o: number; type: number; count: number }): string | undefined {
+    if (e.type !== 2 || e.count === 0) return undefined;
+    const at = e.count <= 4 ? e.o + 8 : this.u32(e.o + 8);
+    this.check(at, e.count);
+    let s = '';
+    for (let i = 0; i < e.count && this.b[at + i] !== 0; i++) s += String.fromCharCode(this.b[at + i]);
+    return s.trim() || undefined;
+  }
   /** Grava um valor SHORT ou LONG no campo de valor de uma entrada. */
   setScalar(e: { o: number; type: number }, v: number) {
     if (e.type === 3) this.w16(e.o + 8, v);
@@ -129,3 +143,44 @@ export function sanitizeExif(tiff: Uint8Array, opts: ExifOptions): Uint8Array | 
     return null;
   }
 }
+
+export interface ExifSummary {
+  make?: string;
+  model?: string;
+  lens?: string;
+  /** Data de captura, ISO local (sem fuso), ex.: 2026-11-20T10:00:00. */
+  date?: string;
+}
+
+/** "2026:11:20 10:00:00" -> "2026-11-20T10:00:00" */
+function exifDate(v: string | undefined): string | undefined {
+  const m = v?.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}` : undefined;
+}
+
+/** Dados de EXIF exibidos na biblioteca. Nunca lança: EXIF ruim dá resumo vazio. */
+export function readExifSummary(tiff: Uint8Array): ExifSummary {
+  try {
+    const t = new Tiff(tiff);
+    const out: ExifSummary = {};
+    let date: string | undefined;
+    for (const e of t.entries(t.u32(4))) {
+      if (e.tag === TAG_MAKE) out.make = t.ascii(e);
+      if (e.tag === TAG_MODEL) out.model = t.ascii(e);
+      if (e.tag === TAG_DATETIME) date ??= t.ascii(e);
+      if (e.tag === TAG_EXIF_IFD) {
+        for (const x of t.entries(t.u32(e.o + 8))) {
+          if (x.tag === TAG_DATETIME_ORIGINAL) date = t.ascii(x) ?? date;
+          if (x.tag === TAG_LENS_MODEL) out.lens = t.ascii(x);
+        }
+      }
+    }
+    const d = exifDate(date);
+    if (d) out.date = d;
+    for (const k of Object.keys(out) as (keyof ExifSummary)[]) if (out[k] === undefined) delete out[k];
+    return out;
+  } catch {
+    return {};
+  }
+}
+

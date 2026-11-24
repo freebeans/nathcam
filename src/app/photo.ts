@@ -1,9 +1,15 @@
-/** Abertura de fotos (JPEG, PNG; HEIC só onde o navegador decodifica nativamente). */
+/** Decodificação de fotos (JPEG, PNG; HEIC só onde o navegador decodifica nativamente). */
+import { readExifSummary, type ExifSummary } from '../export/exif';
+import { extractExif } from '../export/jpeg';
+import { fitSize } from './recipe-edit';
 
 /** v1: a exportação é limitada a 4096 px no lado maior; a fonte também. */
 export const SOURCE_MAX_SIDE = 4096;
+/** Lado maior das miniaturas da biblioteca. */
+export const LIBRARY_THUMB_SIDE = 360;
 
 export interface Photo {
+  id: string;
   name: string;
   bitmap: ImageBitmap;
   /** Arquivo original (para copiar o EXIF na exportação). */
@@ -12,34 +18,48 @@ export interface Photo {
   height: number;
 }
 
-function isHeic(file: File): boolean {
-  return /image\/hei[cf]/.test(file.type) || /\.hei[cf]$/i.test(file.name);
+function isHeic(type: string, name: string): boolean {
+  return /image\/hei[cf]/.test(type) || /\.hei[cf]$/i.test(name);
 }
 
-export async function loadPhoto(file: File, maxTextureSize: number): Promise<Photo> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const blob = new Blob([bytes], { type: file.type });
+/** Decodifica aplicando a orientação do EXIF e reduzindo ao limite da fonte. */
+export async function decodeImage(blob: Blob, name: string, maxTextureSize: number): Promise<ImageBitmap> {
   let probe: ImageBitmap;
   try {
-    // "from-image": aplica a orientação do EXIF.
     probe = await createImageBitmap(blob, { imageOrientation: 'from-image' });
   } catch {
-    if (isHeic(file)) throw new Error('Este navegador não abre HEIC. Escolha a foto pelo rolo da câmera (o iPhone converte para JPEG) ou exporte como JPEG.');
-    throw new Error('Não foi possível abrir esta imagem. Use JPEG ou PNG.');
+    if (isHeic(blob.type, name))
+      throw new Error(
+        `${name}: este navegador não abre HEIC. Escolha a foto pelo rolo da câmera (o iPhone converte para JPEG) ou exporte como JPEG.`,
+      );
+    throw new Error(`${name}: não foi possível abrir. Use JPEG ou PNG.`);
   }
   const limit = Math.min(SOURCE_MAX_SIDE, maxTextureSize);
-  const k = Math.min(1, limit / Math.max(probe.width, probe.height));
-  let bitmap = probe;
-  if (k < 1) {
-    const w = Math.round(probe.width * k);
-    const h = Math.round(probe.height * k);
-    bitmap = await createImageBitmap(blob, {
-      imageOrientation: 'from-image',
-      resizeWidth: w,
-      resizeHeight: h,
-      resizeQuality: 'high',
-    });
-    probe.close();
-  }
-  return { name: file.name, bitmap, bytes, width: bitmap.width, height: bitmap.height };
+  if (Math.max(probe.width, probe.height) <= limit) return probe;
+  const { w, h } = fitSize(probe.width, probe.height, limit, limit, limit);
+  probe.close();
+  return createImageBitmap(blob, { imageOrientation: 'from-image', resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
+}
+
+export function exifSummaryOf(bytes: Uint8Array): ExifSummary {
+  const tiff = extractExif(bytes);
+  return tiff ? readExifSummary(tiff) : {};
+}
+
+/** JPEG pequeno a partir de pixels Display P3. */
+export async function thumbFromPixels(px: Uint8Array, w: number, h: number): Promise<Blob> {
+  const c = new OffscreenCanvas(w, h);
+  const ctx = c.getContext('2d', { colorSpace: 'display-p3' })!;
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(px.buffer as ArrayBuffer, px.byteOffset, px.byteLength), w, h, { colorSpace: 'display-p3' }), 0, 0);
+  return c.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
+}
+
+/** JPEG pequeno a partir de uma imagem decodificada. */
+export async function thumbFromBitmap(bmp: ImageBitmap): Promise<Blob> {
+  const { w, h } = fitSize(bmp.width, bmp.height, LIBRARY_THUMB_SIDE, LIBRARY_THUMB_SIDE, LIBRARY_THUMB_SIDE);
+  const c = new OffscreenCanvas(w, h);
+  const ctx = c.getContext('2d', { colorSpace: 'display-p3' })!;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, w, h);
+  return c.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
 }

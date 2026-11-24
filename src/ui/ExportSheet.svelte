@@ -19,7 +19,7 @@
   let file = $state.raw<File | null>(null);
   let message = $state<string | null>(null);
 
-  let size = $derived(editor.photo ? exportSize(editor.photo.width, editor.photo.height, DEFAULT_EXPORT.maxSide) : null);
+  let size = $derived(editor.outputSize ? exportSize(editor.outputSize.w, editor.outputSize.h, DEFAULT_EXPORT.maxSide) : null);
 
   // Mudou a configuração: o arquivo gerado deixa de valer.
   $effect(() => {
@@ -31,7 +31,8 @@
   async function generate() {
     const r = editor.renderer;
     const photo = editor.photo;
-    if (!r || !photo) return;
+    const output = editor.outputSize;
+    if (!r || !photo || !output) return;
     message = null;
     progress = 0;
     try {
@@ -39,6 +40,7 @@
       const blob = await exportJpeg(
         r,
         frame,
+        output,
         photo.bytes,
         { quality, maxSide: DEFAULT_EXPORT.maxSide, stripLocation },
         (f) => (progress = f),
