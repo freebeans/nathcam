@@ -19,7 +19,7 @@ O produto cobre ajustes globais, recorte e endireitamento sobre fotos JPEG, PNG 
 - Abrir fotos do rolo da câmera ou de arquivos (JPEG, PNG; HEIC via libheif em WASM carregado sob demanda).
 - Presets com intensidade, ajustes globais em três níveis, recorte e endireitamento.
 - Biblioteca leve local, histórico persistente, copiar e colar ajustes em lote.
-- Importação de presets `.json`, LUTs `.cube` e presets `.xmp` do Lightroom.
+- Importação de presets `.json`, LUTs `.cube` e HaldCLUT `.png`, e presets `.xmp` do Lightroom.
 - Exportação JPEG em Display P3, por compartilhamento ou download.
 
 **Fora (por enquanto):**
@@ -147,7 +147,7 @@ Tudo fica no IndexedDB do aparelho, tratado como área de trabalho: o original c
 
 ## Importação e exportação
 
-O app importa três formatos de preset e exporta JPEG P3 com EXIF, por compartilhamento ou download.
+O app importa quatro formatos de preset e exporta JPEG P3 com EXIF, por compartilhamento ou download.
 
 **Imagens de entrada:** JPEG e PNG nativos; HEIC via libheif (WASM, \~1 MB) carregado só quando um HEIC chega.
 
@@ -157,6 +157,7 @@ O app importa três formatos de preset e exporta JPEG P3 com EXIF, por compartil
 | --- | --- |
 | `.json` próprio | Direto, validado por schema |
 | `.cube` | Vira um preset com só a LUT (tamanhos 17³, 33³, 65³), `colorSpace` sRGB por padrão |
+| HaldCLUT `.png` | Vira um preset com só a LUT (cubo de lado L² para uma Hald de nível L, reduzido a 65³ no máximo), `colorSpace` sRGB. Formato da maioria das coleções abertas de emulação de filme |
 | `.xmp` (Lightroom/Camera Raw) | Sliders mapeados para os controles equivalentes: tom, balanço de branco, curvas, HSL, color grading/split toning, vibração, saturação, textura, clareza, grão, vinheta, nitidez, calibração. Perfil de câmera, correções de lente, máscaras e recorte são ignorados |
 
 O resultado de um XMP importado é uma aproximação: as fórmulas da Adobe não são públicas.
