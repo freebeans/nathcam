@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-provia-100f",
+  "name": "Provia 100F",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-provia-100f.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

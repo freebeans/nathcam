@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-lomo-redscale-100",
+  "name": "Lomo Redscale 100",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-lomo-redscale-100.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

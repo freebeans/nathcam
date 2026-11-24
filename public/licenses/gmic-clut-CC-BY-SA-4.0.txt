@@ -1,0 +1,21 @@
+Filtros de emulação de filme (packs "filme", "filme ±", "p&b", "slide", "instantâneo" e "cinema")
+
+Exceção: o pack "fuji" (simulações Fuji X-Trans III, mesma página do G'MIC) não tem licença
+declarada na origem. Está no repositório apenas porque ele é privado e de uso pessoal; não
+redistribuir esses arquivos (public/luts/gmic/gmic-fuji-*).
+
+Origem: coleção de color presets (CLUTs) do G'MIC — https://gmic.eu/color_presets/
+Mesma coleção publicada em https://github.com/cyangraphics/clut (fork de NatronGitHub/clut),
+que inclui LUTs de vários autores, entre elas o Film Emulation pack de Pat David
+(RawTherapee).
+
+Licença: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Alterações feitas aqui: valores arredondados para 4 casas decimais, títulos traduzidos e
+um cabeçalho de atribuição em cada arquivo .cube (gerados por scripts/gmic/fetch.mjs).
+Os arquivos em public/luts/gmic/ são distribuídos sob a mesma licença CC BY-SA 4.0.
+
+Nomes de filmes e fabricantes (Kodak, Fujifilm, Ilford, Agfa, Polaroid, Lomography,
+Rollei) são marcas de seus donos e aparecem apenas para indicar qual filme cada LUT
+aproxima; não há afiliação nem endosso.

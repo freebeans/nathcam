@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-time-zero-vencido",
+  "name": "Time Zero Vencido",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-time-zero-vencido.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-delta-3200",
+  "name": "Delta 3200",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-delta-3200.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

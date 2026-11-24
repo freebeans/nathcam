@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-classic-chrome",
+  "name": "Classic Chrome",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-classic-chrome.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

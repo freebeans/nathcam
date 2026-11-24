@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-polaroid-665",
+  "name": "Polaroid 665",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-polaroid-665.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

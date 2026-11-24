@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-polachrome",
+  "name": "Polachrome",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-polachrome.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

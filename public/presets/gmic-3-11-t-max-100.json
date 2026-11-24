@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-t-max-100",
+  "name": "T-Max 100",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-t-max-100.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

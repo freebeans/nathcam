@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-velvia",
+  "name": "Velvia",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-velvia.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

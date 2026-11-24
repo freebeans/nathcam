@@ -1,0 +1,12 @@
+{
+  "id": "gmic-cinema-fuji-3513",
+  "name": "Fuji 3513",
+  "pack": "cinema",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-cinema-fuji-3513.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

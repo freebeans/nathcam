@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-elite-100-x-pro",
+  "name": "Elite 100 X-Pro",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-elite-100-x-pro.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-velvia-50",
+  "name": "Velvia 50",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-velvia-50.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

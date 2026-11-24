@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-mono",
+  "name": "Mono",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-mono.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

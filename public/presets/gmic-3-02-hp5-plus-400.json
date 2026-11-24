@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-hp5-plus-400",
+  "name": "HP5 Plus 400",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-hp5-plus-400.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-acros-mais-r",
+  "name": "Acros + R",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-acros-mais-r.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

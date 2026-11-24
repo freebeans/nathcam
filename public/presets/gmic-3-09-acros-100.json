@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-acros-100",
+  "name": "Acros 100",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-acros-100.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

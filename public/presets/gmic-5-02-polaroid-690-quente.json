@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-polaroid-690-quente",
+  "name": "Polaroid 690 Quente",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-polaroid-690-quente.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

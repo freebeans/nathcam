@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-mais-menos-portra-400-menos",
+  "name": "Portra 400 −",
+  "pack": "filme ±",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-mais-menos-portra-400-menos.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

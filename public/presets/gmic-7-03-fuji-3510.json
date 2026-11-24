@@ -1,0 +1,12 @@
+{
+  "id": "gmic-cinema-fuji-3510",
+  "name": "Fuji 3510",
+  "pack": "cinema",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-cinema-fuji-3510.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

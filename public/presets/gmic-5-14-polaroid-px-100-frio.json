@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-polaroid-px-100-frio",
+  "name": "Polaroid PX-100 Frio",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-polaroid-px-100-frio.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

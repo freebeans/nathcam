@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-ektachrome-100-vs",
+  "name": "Ektachrome 100 VS",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-ektachrome-100-vs.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

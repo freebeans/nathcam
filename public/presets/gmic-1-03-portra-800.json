@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-portra-800",
+  "name": "Portra 800",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-portra-800.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

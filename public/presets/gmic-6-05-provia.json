@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-provia",
+  "name": "Provia",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-provia.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

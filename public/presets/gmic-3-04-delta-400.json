@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-delta-400",
+  "name": "Delta 400",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-delta-400.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-fuji-fp-100c-frio",
+  "name": "Fuji FP-100C Frio",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-fuji-fp-100c-frio.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

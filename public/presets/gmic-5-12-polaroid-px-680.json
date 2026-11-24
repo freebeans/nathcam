@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-polaroid-px-680",
+  "name": "Polaroid PX-680",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-polaroid-px-680.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

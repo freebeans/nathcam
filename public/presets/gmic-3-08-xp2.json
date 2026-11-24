@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-xp2",
+  "name": "XP2",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-xp2.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

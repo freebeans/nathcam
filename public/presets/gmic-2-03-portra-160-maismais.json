@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-mais-menos-portra-160-maismais",
+  "name": "Portra 160 ++",
+  "pack": "filme ±",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-mais-menos-portra-160-maismais.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-superia-800",
+  "name": "Superia 800",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-superia-800.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

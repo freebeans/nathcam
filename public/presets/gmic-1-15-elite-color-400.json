@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-elite-color-400",
+  "name": "Elite Color 400",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-elite-color-400.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

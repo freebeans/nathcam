@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-bw-400-cn",
+  "name": "BW 400 CN",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-bw-400-cn.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

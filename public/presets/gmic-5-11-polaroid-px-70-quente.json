@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-polaroid-px-70-quente",
+  "name": "Polaroid PX-70 Quente",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-polaroid-px-70-quente.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

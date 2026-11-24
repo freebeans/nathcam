@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-polaroid-669-frio",
+  "name": "Polaroid 669 Frio",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-polaroid-669-frio.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

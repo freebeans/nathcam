@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-sepia",
+  "name": "Sépia",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-sepia.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

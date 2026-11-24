@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-fp4-plus-125",
+  "name": "FP4 Plus 125",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-fp4-plus-125.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

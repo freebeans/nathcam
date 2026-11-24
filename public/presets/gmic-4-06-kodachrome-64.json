@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-kodachrome-64",
+  "name": "Kodachrome 64",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-kodachrome-64.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

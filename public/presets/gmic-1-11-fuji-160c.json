@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-fuji-160c",
+  "name": "Fuji 160C",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-fuji-160c.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

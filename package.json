@@ -14,7 +14,8 @@
     "test:engine": "vitest run --project engine",
     "refs:update": "UPDATE_REFS=1 vitest run --project engine",
     "convert:cssco": "node scripts/cssco/convert.mjs",
-    "e2e": "node tests/e2e.mjs"
+    "e2e": "node tests/e2e.mjs",
+    "fetch:gmic": "node scripts/gmic/fetch.mjs"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.2",

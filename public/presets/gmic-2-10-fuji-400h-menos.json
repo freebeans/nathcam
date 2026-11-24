@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-mais-menos-fuji-400h-menos",
+  "name": "Fuji 400H −",
+  "pack": "filme ±",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-mais-menos-fuji-400h-menos.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

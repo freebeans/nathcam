@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-agfa-precisa-100",
+  "name": "Agfa Precisa 100",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-agfa-precisa-100.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

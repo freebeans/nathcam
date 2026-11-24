@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-astia-100f",
+  "name": "Astia 100F",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-astia-100f.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

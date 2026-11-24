@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-astia",
+  "name": "Astia",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-astia.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

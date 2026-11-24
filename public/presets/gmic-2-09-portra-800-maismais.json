@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-mais-menos-portra-800-maismais",
+  "name": "Portra 800 ++",
+  "pack": "filme ±",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-mais-menos-portra-800-maismais.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-fuji-800z",
+  "name": "Fuji 800Z",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-fuji-800z.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

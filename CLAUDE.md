@@ -24,7 +24,7 @@ O PRD completo está em `docs/prd-editor-de-fotos-pwa.md`. Leia a seção corres
 
 - Presets oficiais são arquivos estáticos em `public/presets/` e `public/luts/`; o `manifest.json` é gerado no build. `extends` é permitido só nesses arquivos.
 - Presets salvos pelo app gravam a receita achatada. Presets do servidor são somente leitura: editar cria uma cópia local.
-- O repositório contém apenas os presets convertidos do cssco (MIT, manter o aviso de copyright) e presets autorais. Presets da comunidade entram só por importação local no aparelho.
+- O repositório contém os presets convertidos do cssco (MIT, manter o aviso de copyright), a coleção de emulação de filme do G'MIC (CC BY-SA 4.0, gerada por `scripts/gmic/fetch.mjs`; manter a atribuição em cada `.cube` e em `public/licenses/`) e presets autorais. O pack `fuji` (Fuji X-Trans III do G'MIC) não tem licença declarada: está aqui só porque o repositório é privado e de uso pessoal; se ele voltar a ser público, remova esse pack. Outros presets da comunidade só entram com licença que permita redistribuição; sem isso, só por importação local no aparelho.
 - Importação de XMP mapeia sliders e calibração para os controles equivalentes; perfis de câmera, lentes, máscaras e recorte são ignorados.
 
 ## Dados

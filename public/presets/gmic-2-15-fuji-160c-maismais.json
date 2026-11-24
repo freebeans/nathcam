@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-mais-menos-fuji-160c-maismais",
+  "name": "Fuji 160C ++",
+  "pack": "filme ±",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-mais-menos-fuji-160c-maismais.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

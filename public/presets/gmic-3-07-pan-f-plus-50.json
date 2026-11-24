@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-pan-f-plus-50",
+  "name": "Pan F Plus 50",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-pan-f-plus-50.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

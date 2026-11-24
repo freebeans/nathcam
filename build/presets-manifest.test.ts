@@ -26,7 +26,8 @@ describe('manifest dos presets oficiais', () => {
       const file = join(publicDir, p.lut.src);
       expect(existsSync(file), file).toBe(true);
       const lut = parseCube(readFileSync(file, 'utf8'));
-      expect([17, 33, 65]).toContain(lut.size);
+      expect(lut.size, p.id).toBeGreaterThanOrEqual(13);
+      expect(lut.size, p.id).toBeLessThanOrEqual(65);
     }
   });
 
@@ -34,5 +35,28 @@ describe('manifest dos presets oficiais', () => {
     const text = readFileSync(join(publicDir, 'luts', 'cssco-c1.cube'), 'utf8');
     expect(text).toMatch(/MIT License, Copyright \(c\) 2016 Lauren Waller/);
     expect(existsSync(join(publicDir, 'luts', 'LICENSE-cssco.txt'))).toBe(true);
+  });
+});
+
+describe('filtros de emulação de filme (G\'MIC, CC BY-SA 4.0)', () => {
+  const manifest = JSON.parse(buildManifest(publicDir)) as { packs: string[]; presets: PresetRecipe[] };
+  const gmic = manifest.presets.filter((p) => p.id.startsWith('gmic-'));
+
+  it('vêm em packs próprios, depois do cssco', () => {
+    expect(gmic.length).toBeGreaterThanOrEqual(80);
+    expect(manifest.packs).toEqual(['cssco', 'filme', 'filme ±', 'p&b', 'slide', 'instantâneo', 'fuji', 'cinema']);
+  });
+
+  it('cada LUT carrega a atribuição e a licença (ou o aviso de uso pessoal, no pack fuji)', () => {
+    for (const p of gmic) {
+      const text = readFileSync(join(publicDir, p.lut!.src), 'utf8');
+      expect(text, p.id).toMatch(/gmic\.eu/);
+      expect(text, p.id).toMatch(p.pack === 'fuji' ? /uso pessoal/ : /CC BY-SA 4\.0/);
+    }
+    expect(existsSync(join(publicDir, 'licenses', 'gmic-clut-CC-BY-SA-4.0.txt'))).toBe(true);
+  });
+
+  it('ids únicos', () => {
+    expect(new Set(gmic.map((p) => p.id)).size).toBe(gmic.length);
   });
 });

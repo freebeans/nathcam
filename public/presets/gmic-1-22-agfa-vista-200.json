@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-agfa-vista-200",
+  "name": "Agfa Vista 200",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-agfa-vista-200.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

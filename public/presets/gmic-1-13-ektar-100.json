@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-ektar-100",
+  "name": "Ektar 100",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-ektar-100.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

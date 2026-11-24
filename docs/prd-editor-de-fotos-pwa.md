@@ -84,8 +84,8 @@ Um preset é uma receita completa em JSON: parâmetros de todos os ajustes, uma 
 
 **Origem dos presets:**
 
-- No deploy: os 14 do cssco convertidos para `.cube` (MIT) e os presets autorais.
-- Importados localmente no aparelho: recriações de VSCO da comunidade em `.cube` e `.xmp`. Não vão para o repositório, para não redistribuir material de terceiros.
+- No deploy: os 14 do cssco convertidos para `.cube` (MIT), 101 emulações de filme da coleção de color presets do G'MIC em 7 packs (filme, filme ±, p&b, slide, instantâneo, cinema: CC BY-SA 4.0, com atribuição; fuji: simulações X-Trans III sem licença declarada, só porque o repositório é privado e de uso pessoal) e os presets autorais.
+- Importados localmente no aparelho: outros presets da comunidade em `.cube`, `.xmp` ou HaldCLUT. Só vão para o repositório se a licença permitir redistribuição.
 
 ## Motor de renderização
 
@@ -181,7 +181,7 @@ Vite + TypeScript + Svelte 5, publicado como site estático com service worker; 
 - **Conversão do cssco:** script único, fora do app, que aplica cada filtro do cssco sobre uma imagem-identidade HaldCLUT num Chrome headless e grava os `.cube`.
 - **Hospedagem:** GitHub Pages (`freebeans.github.io/nathcam`), com HTTPS e deploy a cada push na main (`.github/workflows/deploy.yml`).
 - **Atualização:** automática. A versão nova é baixada em segundo plano e só passa a valer quando o app é aberto do zero, nunca recarregando uma edição aberta.
-- **Licenças:** código do app sob licença aberta; cssco é MIT (manter aviso de copyright). Presets da comunidade nunca entram no repositório.
+- **Licenças:** código do app sob licença aberta; cssco é MIT (manter aviso de copyright); as LUTs do G'MIC são CC BY-SA 4.0 (atribuição em cada arquivo e em `public/licenses/`). Presets da comunidade sem licença de redistribuição não entram no repositório.
 
 ## Roadmap
 

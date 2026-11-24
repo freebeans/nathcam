@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-kodachrome-200",
+  "name": "Kodachrome 200",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-kodachrome-200.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

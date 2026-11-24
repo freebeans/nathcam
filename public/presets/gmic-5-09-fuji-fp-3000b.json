@@ -1,0 +1,12 @@
+{
+  "id": "gmic-instantaneo-fuji-fp-3000b",
+  "name": "Fuji FP-3000B",
+  "pack": "instantâneo",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-instantaneo-fuji-fp-3000b.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-provia-400x",
+  "name": "Provia 400X",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-provia-400x.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

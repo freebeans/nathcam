@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-ektachrome-e100gx",
+  "name": "Ektachrome E100GX",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-ektachrome-e100gx.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

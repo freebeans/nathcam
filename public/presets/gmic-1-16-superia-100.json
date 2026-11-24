@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-superia-100",
+  "name": "Superia 100",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-superia-100.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

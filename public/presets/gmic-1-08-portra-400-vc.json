@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-portra-400-vc",
+  "name": "Portra 400 VC",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-portra-400-vc.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-neopan-1600",
+  "name": "Neopan 1600",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-neopan-1600.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

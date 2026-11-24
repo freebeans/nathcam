@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-pro-neg-hi",
+  "name": "Pro Neg Hi",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-pro-neg-hi.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

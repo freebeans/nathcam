@@ -1,0 +1,12 @@
+{
+  "id": "gmic-peb-tri-x-400",
+  "name": "Tri-X 400",
+  "pack": "p&b",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-peb-tri-x-400.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

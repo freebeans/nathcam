@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-lomo-x-pro-200",
+  "name": "Lomo X-Pro 200",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-lomo-x-pro-200.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

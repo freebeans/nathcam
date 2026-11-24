@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-agfa-ultra-100",
+  "name": "Agfa Ultra 100",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-agfa-ultra-100.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

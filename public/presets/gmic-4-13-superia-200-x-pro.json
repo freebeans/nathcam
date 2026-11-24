@@ -1,0 +1,12 @@
+{
+  "id": "gmic-slide-superia-200-x-pro",
+  "name": "Superia 200 X-Pro",
+  "pack": "slide",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-slide-superia-200-x-pro.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

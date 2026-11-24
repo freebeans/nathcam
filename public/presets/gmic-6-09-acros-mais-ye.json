@@ -1,0 +1,12 @@
+{
+  "id": "gmic-fuji-acros-mais-ye",
+  "name": "Acros + Ye",
+  "pack": "fuji",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-fuji-acros-mais-ye.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

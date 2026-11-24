@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-elite-color-200",
+  "name": "Elite Color 200",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-elite-color-200.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

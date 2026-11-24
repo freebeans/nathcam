@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-portra-160",
+  "name": "Portra 160",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-portra-160.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

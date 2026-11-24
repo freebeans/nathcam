@@ -1,0 +1,12 @@
+{
+  "id": "gmic-filme-superia-x-tra-800",
+  "name": "Superia X-tra 800",
+  "pack": "filme",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-filme-superia-x-tra-800.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

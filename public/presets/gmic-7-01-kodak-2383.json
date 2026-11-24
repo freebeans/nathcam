@@ -1,0 +1,12 @@
+{
+  "id": "gmic-cinema-kodak-2383",
+  "name": "Kodak 2383",
+  "pack": "cinema",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/gmic/gmic-cinema-kodak-2383.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}
