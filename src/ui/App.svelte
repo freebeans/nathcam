@@ -3,6 +3,7 @@
   import { Editor } from '../app/editor.svelte';
   import { Gallery } from '../app/gallery.svelte';
   import { Library, type PhotoRecord } from '../app/library';
+  import { Db } from '../app/db';
   import Viewer from './Viewer.svelte';
   import PresetsPanel from './PresetsPanel.svelte';
   import BasicPanel from './BasicPanel.svelte';
@@ -10,7 +11,8 @@
   import ExportSheet from './ExportSheet.svelte';
   import LibraryView from './LibraryView.svelte';
 
-  const library = new Library();
+  const db = new Db();
+  const library = new Library(db);
   const editor = new Editor(library);
   const gallery = new Gallery(library, () => editor.renderer?.caps.maxTextureSize ?? 4096);
   let fileInput: HTMLInputElement;

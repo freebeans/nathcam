@@ -2,17 +2,20 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Recipe } from '../engine/recipe';
 import { History } from './history';
+import { Db } from './db';
 import { Library } from './library';
 import { emptyRecipe, setUserParam } from './recipe-edit';
 
 let lib: Library;
+let db: Db;
 let n = 0;
 
 beforeEach(() => {
-  lib = new Library(`test-${++n}`);
+  db = new Db(`test-${++n}`);
+  lib = new Library(db);
 });
 afterEach(async () => {
-  await lib.destroy();
+  await db.delete();
 });
 
 function input(name: string) {

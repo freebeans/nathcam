@@ -5,6 +5,8 @@ export type LutColorSpace = 'srgb' | 'display-p3';
 export interface PresetLut {
   src: string;
   colorSpace: LutColorSpace;
+  /** Força da LUT dentro do preset (0..1, padrão 1). Presets achatados guardam aqui a intensidade de antes. */
+  amount?: number;
 }
 
 /**
@@ -44,4 +46,6 @@ export interface Recipe {
   /** Camada do usuário: deslocamentos relativos ao neutro, somados sobre o preset. */
   user: PartialParams;
   crop?: Crop;
+  /** Preset e ajustes fundidos numa camada: os sliders mostram valores absolutos. */
+  flattened?: boolean;
 }

@@ -56,6 +56,14 @@ function monotoneTangents(pts: readonly (readonly [number, number])[]): number[]
   return m;
 }
 
+/** Uma curva de `n` pontos equivalente a aplicar as camadas em sequência. */
+export function composeCurves(layers: readonly Curve[], n = 17): Curve {
+  return Array.from({ length: n }, (_, i) => {
+    const x = i / (n - 1);
+    return [x, applyLayers(layers, x)] as const;
+  });
+}
+
 function applyLayers(layers: readonly Curve[], x: number): number {
   let y = x;
   for (const c of layers) y = evalCurve(c, y);

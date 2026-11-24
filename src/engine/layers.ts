@@ -116,6 +116,6 @@ export function resolveEffective(recipe: Recipe): Effective {
   return {
     params: out as unknown as Params,
     curveLayers,
-    lut: lut ? { src: lut.src, colorSpace: lut.colorSpace, mix: k } : null,
+    lut: lut ? { src: lut.src, colorSpace: lut.colorSpace, mix: k * (lut.amount ?? 1) } : null,
   };
 }

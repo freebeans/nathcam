@@ -3,8 +3,8 @@
  * É uma área de trabalho: o original continua no rolo da câmera, e o iOS
  * pode apagar estes dados.
  */
-import Dexie, { type Table } from 'dexie';
 import type { Recipe } from '../engine/recipe';
+import type { Db } from './db';
 import type { ExifSummary } from '../export/exif';
 import type { HistorySnapshot } from './history';
 import { emptyRecipe } from './recipe-edit';
@@ -50,27 +50,8 @@ export interface Edit {
   history: HistorySnapshot<Recipe>;
 }
 
-class Db extends Dexie {
-  photos!: Table<PhotoRecord, string>;
-  recipes!: Table<RecipeRecord, string>;
-  history!: Table<HistoryRecord, string>;
-
-  constructor(name: string) {
-    super(name);
-    this.version(1).stores({
-      photos: 'id, importedAt',
-      recipes: 'photoId',
-      history: 'photoId',
-    });
-  }
-}
-
 export class Library {
-  private db: Db;
-
-  constructor(name = 'nathcam') {
-    this.db = new Db(name);
-  }
+  constructor(private db: Db) {}
 
   async addPhoto(p: NewPhoto): Promise<string> {
     const id = crypto.randomUUID();
@@ -120,10 +101,5 @@ export class Library {
       await this.db.recipes.bulkDelete(ids);
       await this.db.history.bulkDelete(ids);
     });
-  }
-
-  /** Apaga o banco inteiro (testes). */
-  async destroy(): Promise<void> {
-    await this.db.delete();
   }
 }

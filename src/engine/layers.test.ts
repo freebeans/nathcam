@@ -82,3 +82,10 @@ describe('resolveEffective', () => {
     expect(eff.params.hslBands?.orange.center).toBe(30);
   });
 });
+
+describe('LUT com amount (preset achatado)', () => {
+  it('a mistura da LUT é intensidade x amount', () => {
+    const p = { ...preset, lut: { src: 'luts/p.cube', colorSpace: 'srgb' as const, amount: 0.6 } };
+    expect(resolveEffective(recipe({ preset: p, intensity: 0.5 })).lut?.mix).toBeCloseTo(0.3);
+  });
+});
