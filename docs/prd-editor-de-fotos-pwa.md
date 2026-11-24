@@ -178,7 +178,7 @@ Vite + TypeScript + Svelte 5, publicado como site estático com service worker; 
 - **Testes:** Vitest para lógica (parsers de `.cube` e `.xmp`, resolução de camadas e herança); testes de imagem de referência rodando o motor num navegador headless (Playwright) e comparando com tolerância.
 - **Presets oficiais:** arquivos estáticos em `public/presets/*.json`, `public/luts/*.cube` e um `manifest.json` gerado no build. Adicionar preset oficial = commit + deploy. O service worker os guarda em cache para uso offline.
 - **Conversão do cssco:** script único, fora do app, que aplica cada filtro do cssco sobre uma imagem-identidade HaldCLUT num Chrome headless e grava os `.cube`.
-- **Hospedagem:** Cloudflare Pages ou GitHub Pages (a decidir), com HTTPS e deploy a cada push na main.
+- **Hospedagem:** GitHub Pages (`freebeans.github.io/nathcam`), com HTTPS e deploy a cada push na main (`.github/workflows/deploy.yml`).
 - **Atualização:** automática. A versão nova é baixada em segundo plano e só passa a valer quando o app é aberto do zero, nunca recarregando uma edição aberta.
 - **Licenças:** código do app sob licença aberta; cssco é MIT (manter aviso de copyright). Presets da comunidade nunca entram no repositório.
 
@@ -215,7 +215,6 @@ Os maiores riscos estão no Safari do iPhone (memória, cor e armazenamento) e n
 
 **Em aberto:**
 
-- Hospedagem: Cloudflare Pages ou GitHub Pages.
 - Nome do app.
 - Fórmulas exatas da compressão de gama e da calibração (definir na fase 1 com imagens de teste).
 - Confirmar em aparelhos reais o limite de área de canvas e o tamanho máximo de textura WebGL no iOS.
