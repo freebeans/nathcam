@@ -1,6 +1,6 @@
 /** Estado da biblioteca na interface: lista, importação, seleção e exclusão. */
 import type { Library, PhotoRecord } from './library';
-import { decodeImage, exifSummaryOf, thumbFromBitmap } from './photo';
+import { SOURCE_MAX_SIDE, decodeImage, exifSummaryOf, thumbFromBitmap } from './photo';
 
 export class Gallery {
   photos = $state.raw<PhotoRecord[]>([]);
@@ -31,7 +31,7 @@ export class Gallery {
     for (const f of files) {
       try {
         const bytes = new Uint8Array(await f.arrayBuffer());
-        const bmp = await decodeImage(new Blob([bytes], { type: f.type }), f.name, this.maxTextureSize());
+        const bmp = await decodeImage(new Blob([bytes], { type: f.type }), f.name, Math.min(SOURCE_MAX_SIDE, this.maxTextureSize()));
         try {
           const id = await this.library.addPhoto({
             name: f.name,

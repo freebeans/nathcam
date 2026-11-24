@@ -155,8 +155,13 @@ export class Renderer {
     return { ...this.srcSize };
   }
 
-  /** Carrega a foto (já orientada). Converte para Display P3 no upload, se possível. */
-  setSource(image: TexImageSource & { width: number; height: number }): void {
+  /**
+   * Carrega a foto (já orientada). Converte para Display P3 no upload, se
+   * possível. `mipmaps: false` economiza ~1/3 da memória quando a fonte só
+   * vai ser renderizada em escala 1:1 (exportação em resolução total).
+   */
+  setSource(image: TexImageSource & { width: number; height: number }, opts: { mipmaps?: boolean } = {}): void {
+    const mipmaps = opts.mipmaps ?? true;
     const gl = this.gl;
     const w = image.width;
     const h = image.height;
@@ -165,14 +170,14 @@ export class Renderer {
     if (this.src) gl.deleteTexture(this.src);
     const tex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    const levels = Math.floor(Math.log2(Math.max(w, h))) + 1;
+    const levels = mipmaps ? Math.floor(Math.log2(Math.max(w, h))) + 1 : 1;
     gl.texStorage2D(gl.TEXTURE_2D, levels, gl.SRGB8_ALPHA8, w, h);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    if (mipmaps) gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);

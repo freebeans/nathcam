@@ -3,7 +3,10 @@ import { readExifSummary, type ExifSummary } from '../export/exif';
 import { extractExif } from '../export/jpeg';
 import { fitSize } from './recipe-edit';
 
-/** v1: a exportação é limitada a 4096 px no lado maior; a fonte também. */
+/**
+ * Lado maior da fonte usada na edição (pré-visualização, miniaturas e
+ * exportação padrão). A exportação em resolução total decodifica de novo.
+ */
 export const SOURCE_MAX_SIDE = 4096;
 /** Lado maior das miniaturas da biblioteca. */
 export const LIBRARY_THUMB_SIDE = 360;
@@ -22,8 +25,8 @@ function isHeic(type: string, name: string): boolean {
   return /image\/hei[cf]/.test(type) || /\.hei[cf]$/i.test(name);
 }
 
-/** Decodifica aplicando a orientação do EXIF e reduzindo ao limite da fonte. */
-export async function decodeImage(blob: Blob, name: string, maxTextureSize: number): Promise<ImageBitmap> {
+/** Decodifica aplicando a orientação do EXIF e reduzindo para caber em `maxSide`. */
+export async function decodeImage(blob: Blob, name: string, maxSide: number): Promise<ImageBitmap> {
   let probe: ImageBitmap;
   try {
     probe = await createImageBitmap(blob, { imageOrientation: 'from-image' });
@@ -34,7 +37,7 @@ export async function decodeImage(blob: Blob, name: string, maxTextureSize: numb
       );
     throw new Error(`${name}: não foi possível abrir. Use JPEG ou PNG.`);
   }
-  const limit = Math.min(SOURCE_MAX_SIDE, maxTextureSize);
+  const limit = maxSide;
   if (Math.max(probe.width, probe.height) <= limit) return probe;
   const { w, h } = fitSize(probe.width, probe.height, limit, limit, limit);
   probe.close();

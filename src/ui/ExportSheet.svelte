@@ -5,7 +5,6 @@
     canShareFiles,
     downloadFile,
     exportFileName,
-    exportJpeg,
     exportSize,
     shareFile,
   } from '../export/export';
@@ -18,6 +17,9 @@
   let progress = $state<number | null>(null);
   let file = $state.raw<File | null>(null);
   let message = $state<string | null>(null);
+  let full = $state(false);
+  /** Tamanho final, conhecido depois de gerar em resolução total. */
+  let generatedSize = $state<{ width: number; height: number } | null>(null);
 
   let size = $derived(editor.outputSize ? exportSize(editor.outputSize.w, editor.outputSize.h, DEFAULT_EXPORT.maxSide) : null);
 
@@ -25,27 +27,20 @@
   $effect(() => {
     void quality;
     void stripLocation;
+    void full;
     file = null;
+    generatedSize = null;
   });
 
   async function generate() {
-    const r = editor.renderer;
     const photo = editor.photo;
-    const output = editor.outputSize;
-    if (!r || !photo || !output) return;
+    if (!photo) return;
     message = null;
     progress = 0;
     try {
-      const frame = editor.frameFor(editor.recipe);
-      const blob = await exportJpeg(
-        r,
-        frame,
-        output,
-        photo.bytes,
-        { quality, maxSide: DEFAULT_EXPORT.maxSide, stripLocation },
-        (f) => (progress = f),
-      );
-      file = new File([blob], exportFileName(photo.name), { type: 'image/jpeg' });
+      const res = await editor.exportPhoto({ quality, stripLocation, full }, (f) => (progress = f));
+      generatedSize = { width: res.width, height: res.height };
+      file = new File([res.blob], exportFileName(photo.name), { type: 'image/jpeg' });
     } catch (e) {
       message = e instanceof Error ? e.message : String(e);
     } finally {
@@ -74,9 +69,18 @@
     <h2>Exportar JPEG</h2>
     <button class="link" onclick={onclose}>Fechar</button>
   </header>
-  {#if size}
-    <p class="muted">{size.w} × {size.h} px · Display P3</p>
+  {#if editor.canExportFull}
+    <div class="sizes" role="radiogroup" aria-label="Tamanho">
+      <button role="radio" aria-checked={!full} class:active={!full} onclick={() => (full = false)}>
+        {size ? `${size.w} × ${size.h}` : '4096 px'}
+      </button>
+      <button role="radio" aria-checked={full} class:active={full} onclick={() => (full = true)}>Resolução total</button>
+    </div>
   {/if}
+  <p class="muted">
+    {#if generatedSize}{generatedSize.width} × {generatedSize.height} px{:else if full}Resolução total do original{:else if size}{size.w} × {size.h} px{/if}
+    · Display P3
+  </p>
   <Slider label="Qualidade" value={quality} min={50} max={100} neutral={DEFAULT_EXPORT.quality} format={(v) => String(v)} onchange={(v) => (quality = v)} />
   <label class="toggle">
     <input type="checkbox" bind:checked={stripLocation} />
@@ -134,6 +138,22 @@
     margin: 0;
     color: var(--muted);
     font-size: 13px;
+  }
+  .sizes {
+    display: flex;
+    gap: 8px;
+  }
+  .sizes button {
+    flex: 1;
+    font-size: 13px;
+    padding: 8px;
+    border-radius: 999px;
+    background: var(--track);
+    color: var(--muted);
+  }
+  .sizes button.active {
+    background: var(--fg);
+    color: var(--bg);
   }
   .toggle {
     display: flex;

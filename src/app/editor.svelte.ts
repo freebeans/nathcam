@@ -6,7 +6,8 @@ import type { Frame, Renderer } from '../engine/renderer';
 import { toUniformData } from '../engine/uniforms';
 import { History } from './history';
 import type { Library, PhotoRecord } from './library';
-import { LIBRARY_THUMB_SIDE, decodeImage, thumbFromPixels, type Photo } from './photo';
+import { LIBRARY_THUMB_SIDE, SOURCE_MAX_SIDE, decodeImage, thumbFromPixels, type Photo } from './photo';
+import { DEFAULT_EXPORT, exportJpeg, exportSize } from '../export/export';
 import type { CurveChannel, Curve, HslBand, HslBandShape, PartialParams } from '../engine/params';
 import { defaultHslBands } from '../engine/params';
 import type { PresetCatalog } from './catalog.svelte';
@@ -120,7 +121,7 @@ export class Editor {
     try {
       await this.close();
       const bytes = new Uint8Array(await rec.original.arrayBuffer());
-      bitmap = await decodeImage(rec.original, rec.name, this.renderer?.caps.maxTextureSize ?? 4096);
+      bitmap = await decodeImage(rec.original, rec.name, Math.min(SOURCE_MAX_SIDE, this.renderer?.caps.maxTextureSize ?? 4096));
       const edit = await this.library.loadEdit(rec.id);
       if (seq !== this.openSeq) return; // outra foto foi pedida enquanto esta abria
       this.history = History.restore(edit.history, edit.recipe);
@@ -152,6 +153,45 @@ export class Editor {
     this.photo = null;
     this.cropping = false;
     this.thumbJob++;
+  }
+
+  // ---- exportação
+
+  /** A foto pode ter mais resolução do que a fonte usada na edição. */
+  canExportFull = $derived(!!this.photo && Math.max(this.photo.width, this.photo.height) >= SOURCE_MAX_SIDE);
+
+  /**
+   * Exporta a foto aberta. Em resolução total, decodifica o original de novo
+   * (até o limite de textura), carrega sem mipmaps, renderiza em tiles com o
+   * mesmo motor e devolve a fonte da edição.
+   */
+  async exportPhoto(
+    opts: { quality: number; stripLocation: boolean; full: boolean },
+    onProgress?: (f: number) => void,
+  ): Promise<{ blob: Blob; width: number; height: number }> {
+    const r = this.renderer;
+    const photo = this.photo;
+    if (!r || !photo) throw new Error('Nenhuma foto aberta.');
+    const recipe = this.recipe;
+    const base = { quality: opts.quality, stripLocation: opts.stripLocation };
+    if (!opts.full || !this.canExportFull) {
+      const output = cropOutputSize(photo.width, photo.height, recipe.crop);
+      const blob = await exportJpeg(r, this.frameFor(recipe), output, photo.bytes, { ...base, maxSide: DEFAULT_EXPORT.maxSide }, onProgress);
+      const s = exportSize(output.w, output.h, DEFAULT_EXPORT.maxSide);
+      return { blob, width: s.w, height: s.h };
+    }
+    const full = await decodeImage(new Blob([photo.bytes as Uint8Array<ArrayBuffer>]), photo.name, r.caps.maxTextureSize);
+    try {
+      r.setSource(full, { mipmaps: false });
+      const output = cropOutputSize(full.width, full.height, recipe.crop);
+      const blob = await exportJpeg(r, this.frameFor(recipe, full), output, photo.bytes, { ...base, maxSide: Infinity }, onProgress);
+      return { blob, width: output.w, height: output.h };
+    } finally {
+      full.close();
+      r.releaseTargets();
+      // A foto pode ter sido trocada enquanto exportava.
+      if (this.photo) r.setSource(this.photo.bitmap);
+    }
   }
 
   // ---- copiar e colar

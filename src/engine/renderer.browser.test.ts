@@ -207,6 +207,21 @@ describe('recorte', () => {
   });
 });
 
+describe('fonte sem mipmaps (exportação em resolução total)', () => {
+  it('renderizada em 1:1, dá o mesmo resultado que a fonte com mipmaps', async () => {
+    const r = new Renderer(new OffscreenCanvas(1, 1));
+    try {
+      r.setSource(input, { mipmaps: false });
+      const f = frame({ contrast: 20, clarity: 30, grain: 20 });
+      const noMips = await r.readTiled(f, W, H, 128);
+      const withMips = renderer.read(f, W, H);
+      expect(diffStats(noMips, withMips).max).toBeLessThanOrEqual(1);
+    } finally {
+      r.dispose();
+    }
+  });
+});
+
 describe('fallback de 8 bits', () => {
   let low: Renderer;
   beforeAll(() => {
