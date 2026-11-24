@@ -27,8 +27,6 @@ export class Editor {
   showOriginal = $state(false);
   /** Modo de recorte: mostra a foto inteira (endireitada) com o retângulo por cima. */
   cropping = $state(false);
-  /** Proporção travada do recorte (largura/altura em pixels), ou livre. */
-  cropAspect = $state<number | null>(null);
   thumbs = $state.raw<ReadonlyMap<string, ImageData>>(new Map());
   originalThumb = $state.raw<ImageData | null>(null);
   error = $state<string | null>(null);
@@ -42,6 +40,10 @@ export class Editor {
   private history: History<Recipe> = new History(emptyRecipe());
   private saveTimer = 0;
   private dirty = false;
+  /** Gravação em andamento: fechar a foto espera por ela. */
+  private saving: Promise<void> = Promise.resolve();
+  /** Só a abertura mais recente vale (toques duplos não abrem duas fotos). */
+  private openSeq = 0;
 
   constructor(private library: Library) {}
 
@@ -67,6 +69,9 @@ export class Editor {
     if (this.cropping) r = { ...r, crop: { ...(r.crop ?? fullCrop()), x: 0, y: 0, w: 1, h: 1 } };
     return this.frameFor(r);
   });
+
+  /** Proporção travada do recorte (largura/altura em pixels), ou livre. Vem da receita. */
+  cropAspect = $derived(this.recipe.crop?.aspect ?? null);
 
   presetsInPack: PresetRecipe[] = $derived(this.manifest?.presets.filter((p) => p.pack === this.pack) ?? []);
 
@@ -106,13 +111,16 @@ export class Editor {
 
   /** Abre uma foto da biblioteca com a receita e o histórico gravados. */
   async open(rec: PhotoRecord): Promise<void> {
+    const seq = ++this.openSeq;
     this.error = null;
     this.busy = true;
+    let bitmap: ImageBitmap | null = null;
     try {
       await this.close();
       const bytes = new Uint8Array(await rec.original.arrayBuffer());
-      const bitmap = await decodeImage(rec.original, rec.name, this.renderer?.caps.maxTextureSize ?? 4096);
+      bitmap = await decodeImage(rec.original, rec.name, this.renderer?.caps.maxTextureSize ?? 4096);
       const edit = await this.library.loadEdit(rec.id);
+      if (seq !== this.openSeq) return; // outra foto foi pedida enquanto esta abria
       this.history = History.restore(edit.history, edit.recipe);
       this.photo = { id: rec.id, name: rec.name, bitmap, bytes, width: bitmap.width, height: bitmap.height };
       this.recipe = this.history.current;
@@ -124,10 +132,12 @@ export class Editor {
         this.renderer.setSource(bitmap);
         void this.renderThumbs();
       }
+      bitmap = null; // agora pertence a this.photo
     } catch (e) {
       this.error = e instanceof Error ? e.message : String(e);
     } finally {
-      this.busy = false;
+      bitmap?.close();
+      if (seq === this.openSeq) this.busy = false;
     }
   }
 
@@ -169,15 +179,20 @@ export class Editor {
   }
 
   undo(): void {
-    this.recipe = this.history.undo();
-    this.syncHistoryFlags();
-    this.scheduleSave();
+    this.travel(this.history.undo());
   }
 
   redo(): void {
-    this.recipe = this.history.redo();
+    this.travel(this.history.redo());
+  }
+
+  private travel(recipe: Recipe): void {
+    const cropChanged = recipe.crop !== this.recipe.crop;
+    this.recipe = recipe;
     this.syncHistoryFlags();
     this.scheduleSave();
+    // Miniaturas dos presets mostram a foto recortada.
+    if (cropChanged && !this.cropping) void this.renderThumbs();
   }
 
   startCrop(): void {
@@ -203,25 +218,35 @@ export class Editor {
     this.saveTimer = window.setTimeout(() => void this.flush(), SAVE_DELAY_MS);
   }
 
-  /** Grava receita, histórico e miniatura editada agora. */
-  async flush(): Promise<void> {
+  /**
+   * Grava receita, histórico e miniatura editada agora. Tudo o que vai ser
+   * gravado é capturado antes do primeiro await, para que trocar de foto no
+   * meio não grave o estado de uma foto com o id de outra.
+   */
+  flush(): Promise<void> {
     clearTimeout(this.saveTimer);
     const photo = this.photo;
-    if (!this.dirty || !photo) return;
+    if (!this.dirty || !photo) return this.saving;
     this.dirty = false;
-    try {
-      const thumb = await this.libraryThumb();
-      await this.library.saveEdit(photo.id, this.recipe, this.history.snapshot(), thumb ?? undefined);
-    } catch (e) {
-      this.error = `Não foi possível salvar: ${e instanceof Error ? e.message : String(e)}`;
-    }
+    const id = photo.id;
+    const recipe = this.recipe;
+    const snapshot = this.history.snapshot();
+    const thumb = this.libraryThumb(); // lê os pixels já, de forma síncrona
+    this.saving = this.saving.then(async () => {
+      try {
+        await this.library.saveEdit(id, recipe, snapshot, (await thumb) ?? undefined);
+      } catch (e) {
+        this.error = `Não foi possível salvar: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    });
+    return this.saving;
   }
 
-  private async libraryThumb(): Promise<Blob | null> {
+  private libraryThumb(): Promise<Blob | null> {
     const out = this.outputSize;
-    if (!this.renderer || !out) return null;
+    if (!this.renderer || !out) return Promise.resolve(null);
     const { w, h } = fitSize(out.w, out.h, LIBRARY_THUMB_SIDE, LIBRARY_THUMB_SIDE, LIBRARY_THUMB_SIDE);
-    return thumbFromPixels(this.renderer.read(this.frameFor(this.recipe), w, h), w, h);
+    return thumbFromPixels(this.renderer.read(this.frameFor(this.recipe), w, h), w, h).catch(() => null);
   }
 
   // ---- miniaturas dos presets

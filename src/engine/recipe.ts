@@ -31,6 +31,8 @@ export interface Crop {
   /** Rotações de 90° no sentido horário (0..3). */
   quarterTurns: number;
   flipH: boolean;
+  /** Proporção travada (largura/altura em pixels), ou ausente/null = livre. */
+  aspect?: number | null;
 }
 
 /** Estado completo de edição de uma foto. */

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyMat3 } from './color';
 import {
-  constrainCrop,
   cropFits,
   fitTowards,
   flipCrop,
@@ -111,26 +110,6 @@ describe('maxCenteredRect / rectInside', () => {
   });
 });
 
-describe('constrainCrop', () => {
-  it('mantém o recorte dentro da foto endireitada, encolhendo em torno do centro', () => {
-    const c = constrainCrop(4000, 3000, crop({ angle: 8, x: 0, y: 0, w: 1, h: 1 }));
-    const px = { x: c.x * 4000, y: c.y * 3000, w: c.w * 4000, h: c.h * 3000 };
-    expect(rectInside(4000, 3000, 8, { x: px.x + 0.5, y: px.y + 0.5, w: px.w - 1, h: px.h - 1 })).toBe(true);
-    expect(c.x + c.w / 2).toBeCloseTo(0.5);
-    expect(c.w / c.h).toBeCloseTo(1, 1); // proporção normalizada preservada
-  });
-
-  it('não mexe num recorte válido', () => {
-    const c = crop({ x: 0.1, y: 0.2, w: 0.3, h: 0.3 });
-    expect(constrainCrop(4000, 3000, c)).toEqual(c);
-  });
-
-  it('impõe tamanho mínimo', () => {
-    const c = constrainCrop(4000, 3000, crop({ w: 0, h: 0 }));
-    expect(c.w * 4000).toBeGreaterThanOrEqual(32);
-  });
-});
-
 describe('straightenCrop', () => {
   it('ao endireitar, o recorte vira o maior retângulo centrado com a mesma proporção', () => {
     const c = straightenCrop(4000, 3000, crop({ x: 0, y: 0, w: 1, h: 1 }), 5);
@@ -193,5 +172,31 @@ describe('fitTowards', () => {
     const from = straightenCrop(4000, 3000, crop({}), 10);
     const to = { ...from, w: from.w + 0.2 };
     expect(cropFits(4000, 3000, fitTowards(4000, 3000, from, to))).toBe(true);
+  });
+});
+
+describe('girar e espelhar agem sobre a imagem exibida', () => {
+  const at = (c: Crop, u: number, v: number) => map(cropTransform(4000, 3000, c), u, v);
+  for (const flipH of [false, true]) {
+    it(`girar 90° gira a imagem exibida no sentido horário${flipH ? ' (espelhada)' : ''}`, () => {
+      const before = crop({ x: 0.1, y: 0.2, w: 0.5, h: 0.3, flipH });
+      const after = rotateCropClockwise(before);
+      // Giro horário: o novo canto superior esquerdo era o inferior esquerdo.
+      close(at(after, 0, 0), at(before, 0, 1));
+      close(at(after, 1, 0), at(before, 0, 0));
+      close(at(after, 1, 1), at(before, 1, 0));
+    });
+  }
+
+  it('espelhar troca esquerda e direita da imagem exibida, também endireitada', () => {
+    const before = straightenCrop(4000, 3000, crop({ x: 0.1, y: 0.2, w: 0.5, h: 0.3 }), 7);
+    const after = flipCrop(before);
+    close(at(after, 0, 0), at(before, 1, 0));
+    close(at(after, 0.25, 0.6), at(before, 0.75, 0.6));
+  });
+
+  it('girar inverte a proporção travada', () => {
+    expect(rotateCropClockwise(crop({ aspect: 4 / 5 })).aspect).toBeCloseTo(5 / 4);
+    expect(rotateCropClockwise(crop({ aspect: null })).aspect).toBeNull();
   });
 });

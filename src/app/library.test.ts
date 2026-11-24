@@ -39,7 +39,7 @@ describe('Library', () => {
 
   it('devolve o original intacto', async () => {
     const id = await lib.addPhoto(input('a.jpg'));
-    const p = await lib.getPhoto(id);
+    const p = (await lib.listPhotos()).find((x) => x.id === id);
     expect(new Uint8Array(await p!.original.arrayBuffer())).toEqual(input('a.jpg').bytes);
   });
 
@@ -62,7 +62,7 @@ describe('Library', () => {
     expect(edit.recipe).toEqual(r1);
     const restored = History.restore(edit.history, edit.recipe);
     expect(restored.undo()).toEqual(emptyRecipe());
-    const p = await lib.getPhoto(id);
+    const p = (await lib.listPhotos()).find((x) => x.id === id);
     expect(new Uint8Array(await p!.thumb!.arrayBuffer())).toEqual(new Uint8Array([7]));
     expect(p!.editedAt).toBeGreaterThan(0);
   });
@@ -73,7 +73,14 @@ describe('Library', () => {
     await lib.saveEdit(a, emptyRecipe(), new History(emptyRecipe()).snapshot());
     await lib.deletePhotos([a]);
     expect((await lib.listPhotos()).map((p) => p.id)).toEqual([b]);
-    expect(await lib.getPhoto(a)).toBeUndefined();
+    expect((await lib.loadEdit(a)).recipe).toEqual(emptyRecipe());
+  });
+
+  it('gravar a edição de uma foto já apagada não deixa receita órfã', async () => {
+    const a = await lib.addPhoto(input('a.jpg'));
+    await lib.deletePhotos([a]);
+    const saved = await lib.saveEdit(a, setUserParam(emptyRecipe(), 'exposure', 1), new History(emptyRecipe()).snapshot());
+    expect(saved).toBe(false);
     expect((await lib.loadEdit(a)).recipe).toEqual(emptyRecipe());
   });
 });

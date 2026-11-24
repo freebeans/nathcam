@@ -93,23 +93,24 @@ export class Library {
     return this.db.photos.orderBy('importedAt').reverse().toArray();
   }
 
-  getPhoto(id: string): Promise<PhotoRecord | undefined> {
-    return this.db.photos.get(id);
-  }
-
   async loadEdit(id: string): Promise<Edit> {
     const [r, h] = await Promise.all([this.db.recipes.get(id), this.db.history.get(id)]);
     const recipe = r?.recipe ?? emptyRecipe();
     return { recipe, history: h?.snapshot ?? { entries: [recipe], index: 0 } };
   }
 
-  /** Grava a receita atual, o histórico e (se dada) a miniatura editada, numa transação. */
-  async saveEdit(id: string, recipe: Recipe, history: HistorySnapshot<Recipe>, thumb?: Blob): Promise<void> {
+  /**
+   * Grava a receita atual, o histórico e (se dada) a miniatura editada, numa
+   * transação. Devolve false (e não grava nada) se a foto não existe mais.
+   */
+  async saveEdit(id: string, recipe: Recipe, history: HistorySnapshot<Recipe>, thumb?: Blob): Promise<boolean> {
     const now = Date.now();
-    await this.db.transaction('rw', this.db.photos, this.db.recipes, this.db.history, async () => {
+    return this.db.transaction('rw', this.db.photos, this.db.recipes, this.db.history, async () => {
+      const found = await this.db.photos.update(id, thumb ? { editedAt: now, thumb } : { editedAt: now });
+      if (!found) return false;
       await this.db.recipes.put({ photoId: id, recipe, updatedAt: now });
       await this.db.history.put({ photoId: id, snapshot: history });
-      await this.db.photos.update(id, thumb ? { editedAt: now, thumb } : { editedAt: now });
+      return true;
     });
   }
 

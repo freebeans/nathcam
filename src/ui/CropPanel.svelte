@@ -26,40 +26,36 @@
     { label: '9:16', value: 9 / 16 },
     { label: '16:9', value: 16 / 9 },
   ];
-  let ratioLabel = $state('Livre');
-
-  function size() {
+  function originalAspect(): number {
     const p = editor.photo!;
-    return { w: p.width, h: p.height };
+    const o = orientedSize(p.width, p.height, crop.quarterTurns);
+    return o.w / o.h;
   }
 
+  function aspectOf(r: (typeof RATIOS)[number]): number | null {
+    return r.value === 'original' ? originalAspect() : r.value;
+  }
+
+  /** O botão ativo vem da receita: desfazer e reabrir a foto mostram a proporção certa. */
+  let active = $derived.by(() => {
+    const a = crop.aspect ?? null;
+    if (a === null) return 'Livre';
+    return RATIOS.find((r) => r.value !== null && Math.abs((aspectOf(r) ?? 0) - a) < 1e-3)?.label ?? null;
+  });
+
   function chooseRatio(r: (typeof RATIOS)[number]) {
-    ratioLabel = r.label;
-    if (r.value === null) {
-      editor.cropAspect = null;
+    const aspect = aspectOf(r);
+    if (aspect === null) {
+      editor.setCrop({ ...crop, aspect: null });
       return;
     }
-    const { w, h } = size();
-    const o = orientedSize(w, h, crop.quarterTurns);
-    const aspect = r.value === 'original' ? o.w / o.h : r.value;
-    editor.cropAspect = aspect;
-    editor.setCrop(aspectCrop(w, h, crop, aspect));
+    const p = editor.photo!;
+    editor.setCrop({ ...aspectCrop(p.width, p.height, crop, aspect), aspect });
   }
 
   function straighten(angle: number) {
-    const { w, h } = size();
-    editor.setCrop(straightenCrop(w, h, crop, angle), 'straighten');
-  }
-
-  function rotate() {
-    editor.setCrop(rotateCropClockwise(crop));
-    if (editor.cropAspect) editor.cropAspect = 1 / editor.cropAspect;
-  }
-
-  function reset() {
-    ratioLabel = 'Livre';
-    editor.cropAspect = null;
-    editor.setCrop(fullCrop());
+    const p = editor.photo!;
+    editor.setCrop(straightenCrop(p.width, p.height, crop, angle), 'straighten');
   }
 </script>
 
@@ -77,13 +73,13 @@
   </div>
   <div class="ratios">
     {#each RATIOS as r (r.label)}
-      <button class:active={ratioLabel === r.label} onclick={() => chooseRatio(r)}>{r.label}</button>
+      <button class:active={active === r.label} onclick={() => chooseRatio(r)}>{r.label}</button>
     {/each}
   </div>
   <div class="actions">
-    <button class="link" onclick={rotate}>Girar 90°</button>
+    <button class="link" onclick={() => editor.setCrop(rotateCropClockwise(crop))}>Girar 90°</button>
     <button class="link" onclick={() => editor.setCrop(flipCrop(crop))}>Espelhar</button>
-    <button class="link" onclick={reset}>Redefinir</button>
+    <button class="link" onclick={() => editor.setCrop(fullCrop())}>Redefinir</button>
     <button class="primary" onclick={() => editor.finishCrop()}>Concluir</button>
   </div>
 </div>

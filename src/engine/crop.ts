@@ -17,10 +17,6 @@ export function fullCrop(): Crop {
   return { x: 0, y: 0, w: 1, h: 1, angle: 0, quarterTurns: 0, flipH: false };
 }
 
-export function isIdentityCrop(c: Crop | undefined): boolean {
-  return !c || (c.x === 0 && c.y === 0 && c.w === 1 && c.h === 1 && c.angle === 0 && c.quarterTurns % 4 === 0 && !c.flipH);
-}
-
 export function orientedSize(w: number, h: number, quarterTurns: number): { w: number; h: number } {
   return quarterTurns % 2 === 1 ? { w: h, h: w } : { w, h };
 }
@@ -113,54 +109,6 @@ export function maxCenteredRect(W: number, H: number, angle: number, aspect: num
 }
 
 /**
- * Garante que o recorte cabe na foto endireitada e tem um tamanho mínimo:
- * se não couber, encolhe em torno do próprio centro (mantendo a proporção)
- * e, se preciso, aproxima o centro do centro da imagem.
- */
-export function constrainCrop(srcW: number, srcH: number, c: Crop): Crop {
-  const o = orientedSize(srcW, srcH, c.quarterTurns);
-  const minW = Math.min(1, MIN_CROP_PX / o.w);
-  const minH = Math.min(1, MIN_CROP_PX / o.h);
-  let w = Math.min(1, Math.max(c.w, minW));
-  let h = Math.min(1, Math.max(c.h, minH));
-  let cx = c.x + c.w / 2;
-  let cy = c.y + c.h / 2;
-  const toPx = (k: number, t: number): PxRect => {
-    const px = (0.5 + (cx - 0.5) * t) * o.w;
-    const py = (0.5 + (cy - 0.5) * t) * o.h;
-    return { x: px - (w * k * o.w) / 2, y: py - (h * k * o.h) / 2, w: w * k * o.w, h: h * k * o.h };
-  };
-  const fits = (k: number, t: number) => rectInside(o.w, o.h, c.angle, toPx(k, t));
-  if (fits(1, 1)) return w === c.w && h === c.h ? c : { ...c, x: cx - w / 2, y: cy - h / 2, w, h };
-  // Primeiro tenta só aproximar o centro; depois encolhe.
-  let t = 1;
-  if (fits(1, 0)) {
-    let lo = 0;
-    let hi = 1;
-    for (let i = 0; i < 30; i++) {
-      const m = (lo + hi) / 2;
-      if (fits(1, m)) lo = m;
-      else hi = m;
-    }
-    t = lo;
-  } else {
-    t = 0;
-    let lo = 0;
-    let hi = 1;
-    for (let i = 0; i < 30; i++) {
-      const m = (lo + hi) / 2;
-      if (fits(m, 0)) lo = m;
-      else hi = m;
-    }
-    w *= lo;
-    h *= lo;
-  }
-  cx = 0.5 + (cx - 0.5) * t;
-  cy = 0.5 + (cy - 0.5) * t;
-  return { ...c, x: cx - w / 2, y: cy - h / 2, w, h };
-}
-
-/**
  * Muda o ângulo de endireitamento: o recorte vira o maior retângulo
  * centrado que cabe, com a mesma proporção em pixels.
  */
@@ -183,10 +131,14 @@ export function aspectCrop(srcW: number, srcH: number, c: Crop, aspect: number):
   return { ...c, x: (1 - w) / 2, y: (1 - h) / 2, w, h };
 }
 
-/** Gira 90° no sentido horário, mantendo a região recortada. */
+/** Gira a imagem exibida 90° no sentido horário, mantendo a região recortada. */
 export function rotateCropClockwise(c: Crop): Crop {
+  // O espelho vem depois dos giros: com ele ligado, girar a imagem exibida no
+  // sentido horário é girar a fonte no sentido anti-horário.
+  const quarterTurns = (c.quarterTurns + (c.flipH ? 3 : 1)) % 4;
   // O retângulo normalizado gira junto: (x, y, w, h) -> (1 - y - h, x, h, w).
-  return { ...c, quarterTurns: (c.quarterTurns + 1) % 4, x: 1 - c.y - c.h, y: c.x, w: c.h, h: c.w, angle: c.angle };
+  const aspect = c.aspect ? 1 / c.aspect : c.aspect;
+  return { ...c, quarterTurns, x: 1 - c.y - c.h, y: c.x, w: c.h, h: c.w, aspect };
 }
 
 /** Espelha na horizontal, mantendo a região recortada. */

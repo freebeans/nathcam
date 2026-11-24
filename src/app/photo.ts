@@ -46,20 +46,24 @@ export function exifSummaryOf(bytes: Uint8Array): ExifSummary {
   return tiff ? readExifSummary(tiff) : {};
 }
 
-/** JPEG pequeno a partir de pixels Display P3. */
-export async function thumbFromPixels(px: Uint8Array, w: number, h: number): Promise<Blob> {
+/** Canvas Display P3 do tamanho dado; `draw` pinta nele, e o resultado vira um JPEG pequeno. */
+function smallJpeg(w: number, h: number, draw: (ctx: OffscreenCanvasRenderingContext2D) => void): Promise<Blob> {
   const c = new OffscreenCanvas(w, h);
-  const ctx = c.getContext('2d', { colorSpace: 'display-p3' })!;
-  ctx.putImageData(new ImageData(new Uint8ClampedArray(px.buffer as ArrayBuffer, px.byteOffset, px.byteLength), w, h, { colorSpace: 'display-p3' }), 0, 0);
+  draw(c.getContext('2d', { colorSpace: 'display-p3' })!);
   return c.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
 }
 
+/** JPEG pequeno a partir de pixels Display P3 (lidos na hora, antes de retornar). */
+export function thumbFromPixels(px: Uint8Array, w: number, h: number): Promise<Blob> {
+  const data = new Uint8ClampedArray(px.buffer as ArrayBuffer, px.byteOffset, px.byteLength);
+  return smallJpeg(w, h, (ctx) => ctx.putImageData(new ImageData(data, w, h, { colorSpace: 'display-p3' }), 0, 0));
+}
+
 /** JPEG pequeno a partir de uma imagem decodificada. */
-export async function thumbFromBitmap(bmp: ImageBitmap): Promise<Blob> {
+export function thumbFromBitmap(bmp: ImageBitmap): Promise<Blob> {
   const { w, h } = fitSize(bmp.width, bmp.height, LIBRARY_THUMB_SIDE, LIBRARY_THUMB_SIDE, LIBRARY_THUMB_SIDE);
-  const c = new OffscreenCanvas(w, h);
-  const ctx = c.getContext('2d', { colorSpace: 'display-p3' })!;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bmp, 0, 0, w, h);
-  return c.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
+  return smallJpeg(w, h, (ctx) => {
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bmp, 0, 0, w, h);
+  });
 }

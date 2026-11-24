@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  /** Cada arraste é um passo próprio no histórico, mesmo entre sessões de recorte. */
+  let gestures = 0;
+</script>
+
 <script lang="ts">
   import type { Editor } from '../app/editor.svelte';
   import { fitTowards, fullCrop, orientedSize } from '../engine/crop';
@@ -16,7 +21,7 @@
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     start = { mode, px: e.clientX, py: e.clientY, crop };
-    gesture++;
+    gesture = ++gestures;
     dragging = true;
   }
 

@@ -183,6 +183,9 @@ try {
   d = await canvasDims();
   check(Math.abs(d.w - d.h) <= 1, 'depois de recarregar, preset e recorte continuam lá');
   check(await page.getByRole('button', { name: 'Desfazer' }).isEnabled(), 'histórico persistido');
+  await page.getByRole('button', { name: 'Recorte', exact: true }).click();
+  check(await page.getByRole('button', { name: '1:1' }).evaluate((b) => b.classList.contains('active')), 'proporção travada (1:1) restaurada');
+  await page.getByRole('button', { name: 'Concluir' }).click();
   await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
 
   // ---- apagar

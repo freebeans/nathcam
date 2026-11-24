@@ -15,7 +15,12 @@ export class Gallery {
   ) {}
 
   async refresh(): Promise<void> {
-    this.photos = await this.library.listPhotos();
+    try {
+      this.photos = await this.library.listPhotos();
+    } catch (e) {
+      // Ex.: navegação privada ou armazenamento cheio/bloqueado.
+      this.error = `Armazenamento local indisponível: ${e instanceof Error ? e.message : String(e)}`;
+    }
   }
 
   /** Importa arquivos para a biblioteca; devolve os ids criados, na ordem. */
