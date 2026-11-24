@@ -1,0 +1,12 @@
+{
+  "id": "cssco-f2",
+  "name": "F2",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-f2.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "cssco-a6",
+  "name": "A6",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-a6.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

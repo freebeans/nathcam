@@ -1,0 +1,12 @@
+{
+  "id": "cssco-acg",
+  "name": "ACG",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-acg.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

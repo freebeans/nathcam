@@ -1,0 +1,12 @@
+{
+  "id": "cssco-g3",
+  "name": "G3",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-g3.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

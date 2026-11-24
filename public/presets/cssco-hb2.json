@@ -1,0 +1,12 @@
+{
+  "id": "cssco-hb2",
+  "name": "HB2",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-hb2.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

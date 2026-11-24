@@ -1,0 +1,12 @@
+{
+  "id": "cssco-x1",
+  "name": "X1",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-x1.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

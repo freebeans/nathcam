@@ -1,0 +1,12 @@
+{
+  "id": "cssco-m3",
+  "name": "M3",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-m3.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

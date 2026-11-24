@@ -1,0 +1,12 @@
+{
+  "id": "cssco-b5",
+  "name": "B5",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-b5.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "cssco-lv3",
+  "name": "LV3",
+  "pack": "cssco",
+  "extends": null,
+  "params": {},
+  "lut": {
+    "src": "luts/cssco-lv3.cube",
+    "colorSpace": "srgb"
+  },
+  "engineVersion": 1
+}
