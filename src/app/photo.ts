@@ -1,6 +1,7 @@
 /** Decodificação de fotos (JPEG, PNG; HEIC só onde o navegador decodifica nativamente). */
 import { readExifSummary, type ExifSummary } from '../export/exif';
-import { extractExif } from '../export/jpeg';
+import { extractAnyExif } from '../export/exif-source';
+import { heicToRgba, looksLikeHeic } from './heic';
 import { fitSize } from './recipe-edit';
 
 /**
@@ -21,31 +22,36 @@ export interface Photo {
   height: number;
 }
 
-function isHeic(type: string, name: string): boolean {
-  return /image\/hei[cf]/.test(type) || /\.hei[cf]$/i.test(name);
-}
-
 /** Decodifica aplicando a orientação do EXIF e reduzindo para caber em `maxSide`. */
 export async function decodeImage(blob: Blob, name: string, maxSide: number): Promise<ImageBitmap> {
   let probe: ImageBitmap;
   try {
     probe = await createImageBitmap(blob, { imageOrientation: 'from-image' });
   } catch {
-    if (isHeic(blob.type, name))
-      throw new Error(
-        `${name}: este navegador não abre HEIC. Escolha a foto pelo rolo da câmera (o iPhone converte para JPEG) ou exporte como JPEG.`,
-      );
-    throw new Error(`${name}: não foi possível abrir. Use JPEG ou PNG.`);
+    const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+    if (!looksLikeHeic(blob.type, name, head)) throw new Error(`${name}: não foi possível abrir. Use JPEG, PNG ou HEIC.`);
+    probe = await decodeHeicBitmap(blob, name);
   }
-  const limit = maxSide;
-  if (Math.max(probe.width, probe.height) <= limit) return probe;
-  const { w, h } = fitSize(probe.width, probe.height, limit, limit, limit);
+  if (Math.max(probe.width, probe.height) <= maxSide) return probe;
+  const { w, h } = fitSize(probe.width, probe.height, maxSide, maxSide, maxSide);
+  const resized = await createImageBitmap(probe, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
   probe.close();
-  return createImageBitmap(blob, { imageOrientation: 'from-image', resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
+  return resized;
+}
+
+/** HEIC sem suporte nativo: libheif em WASM, carregado agora. */
+async function decodeHeicBitmap(blob: Blob, name: string): Promise<ImageBitmap> {
+  try {
+    const img = await heicToRgba(new Uint8Array(await blob.arrayBuffer()));
+    const data = new ImageData(img.data as Uint8ClampedArray<ArrayBuffer>, img.width, img.height, { colorSpace: 'display-p3' });
+    return await createImageBitmap(data);
+  } catch (e) {
+    throw new Error(`${name}: não foi possível abrir o HEIC (${e instanceof Error ? e.message : String(e)}).`);
+  }
 }
 
 export function exifSummaryOf(bytes: Uint8Array): ExifSummary {
-  const tiff = extractExif(bytes);
+  const tiff = extractAnyExif(bytes);
   return tiff ? readExifSummary(tiff) : {};
 }
 

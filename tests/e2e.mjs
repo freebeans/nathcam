@@ -262,12 +262,83 @@ try {
   await page.getByRole('button', { name: 'Abrir foto' }).waitFor();
   check(true, 'apagar remove a foto da biblioteca');
 
+  // ---- fase 6: HEIC (libheif, o Chromium não abre HEIC sozinho)
+  const fixture = (f) => join(root, 'tests', 'fixtures', f);
+  const exportedBytes = async () => {
+    await page.getByRole('button', { name: 'Gerar JPEG' }).click();
+    await page.getByRole('button', { name: 'Baixar' }).waitFor({ timeout: 300_000 });
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Baixar' }).click()]);
+    return readFileSync(await dl.path());
+  };
+  const jpegSize = (bytes) =>
+    page.evaluate(async (b64) => {
+      const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'image/jpeg' }));
+      return [bmp.width, bmp.height];
+    }, bytes.toString('base64'));
+
+  await page.locator('input[type=file][accept="image/*"]').setInputFiles(fixture('photo-heic.heic'));
+  await page.getByRole('button', { name: 'C1', exact: true }).waitFor({ timeout: 60_000 }).catch(() => null);
+  const heicDims = await canvasDims();
+  check(heicDims.w > heicDims.h && Math.abs(heicDims.w / heicDims.h - 4 / 3) < 0.02, `HEIC aberto pelo libheif (${heicDims.w}x${heicDims.h})`);
+  await page.getByRole('tab', { name: 'Básico' }).click();
+  await page.evaluate(() => {
+    const i = document.querySelectorAll('.basic input[type=range]')[1];
+    i.value = '40';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.getByRole('button', { name: 'Mais ações' }).click();
+  await page.getByRole('button', { name: 'Copiar ajustes' }).click();
+  await page.getByRole('button', { name: 'Exportar' }).click();
+  const heicJpeg = await exportedBytes();
+  check(heicJpeg.includes(Buffer.from('HEIC Model')), 'EXIF do HEIC vai para o JPEG exportado');
+  await page.getByRole('button', { name: 'Fechar' }).click();
+  await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
+
+  // ---- resolução total
+  await page.locator('input[type=file][accept="image/*"]').setInputFiles(fixture('photo-24mp.jpg'));
+  await page.getByRole('button', { name: 'Exportar' }).waitFor();
+  await page.waitForTimeout(500);
+  await page.getByRole('button', { name: 'Exportar' }).click();
+  await page.getByRole('radio', { name: 'Resolução total' }).click();
+  const t0full = Date.now();
+  const fullJpeg = await exportedBytes();
+  const fullDims = await jpegSize(fullJpeg);
+  console.log(`     exportação 24 MP em ${Date.now() - t0full} ms (headless/CPU)`);
+  check(fullDims[0] === 6000 && fullDims[1] === 4000, `exportação em resolução total (${fullDims.join('x')})`);
+  check(fullJpeg.includes(Buffer.from('BigCam')), 'EXIF preservado na resolução total');
+  await page.getByRole('button', { name: 'Fechar' }).click();
+  await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
+
+  // ---- colar em lote
+  await page.getByRole('button', { name: 'Selecionar' }).click();
+  await page.getByRole('button', { name: 'photo-24mp.jpg' }).click();
+  await page.getByRole('button', { name: 'Colar ajustes (1)' }).click();
+  await page.getByRole('dialog', { name: 'Colar ajustes' }).getByRole('button', { name: 'Colar' }).click();
+  await page.getByText(/Colando ajustes/).waitFor({ state: 'detached', timeout: 60_000 });
+  check((await page.locator('.cell .dot').count()) === 2, 'colar em lote marca a foto como editada');
+  await page.getByRole('button', { name: 'photo-24mp.jpg' }).click();
+  await page.getByRole('tab', { name: 'Básico' }).click();
+  const pastedContrast = await page.locator('.basic .slider').nth(1).locator('.value').textContent();
+  check(pastedContrast === '+40', `ajuste colado chegou na foto (contraste ${pastedContrast})`);
+  await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
+
+  // ---- backup .zip
+  await page.getByRole('button', { name: 'Backup dos presets' }).click();
+  await page.getByRole('button', { name: 'Fazer backup' }).click();
+  const [zipDl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Baixar' }).click()]);
+  const zipPath = await zipDl.path();
+  check(/^nathcam-presets-.*\.zip$/.test(zipDl.suggestedFilename()), `backup gerado (${zipDl.suggestedFilename()})`);
+  await page.locator('input[type=file][accept*=".zip"]').setInputFiles({ name: 'backup.zip', mimeType: 'application/zip', buffer: readFileSync(zipPath) });
+  const restored = await page.getByText(/^Restaurado:/).textContent({ timeout: 10_000 }).catch(() => '');
+  check(/Restaurado: [1-9]\d* presets? e [1-9]\d* LUTs?/.test(restored), `restaurar backup (${restored})`);
+  await page.getByRole('button', { name: 'Fechar' }).click();
+
   // ---- offline
   await page.evaluate(() => navigator.serviceWorker.ready);
   await context.setOffline(true);
   await page.reload();
   const offlineOk = await page
-    .getByRole('button', { name: 'Abrir foto' })
+    .getByRole('button', { name: 'Importar' })
     .waitFor({ timeout: 10_000 })
     .then(() => true, () => false);
   check(offlineOk, 'abre sem rede (service worker)');

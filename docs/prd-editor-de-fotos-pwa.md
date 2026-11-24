@@ -149,7 +149,7 @@ Tudo fica no IndexedDB do aparelho, tratado como área de trabalho: o original c
 
 O app importa quatro formatos de preset e exporta JPEG P3 com EXIF, por compartilhamento ou download.
 
-**Imagens de entrada:** JPEG e PNG nativos; HEIC via libheif (WASM, \~1 MB) carregado só quando um HEIC chega.
+**Imagens de entrada:** JPEG e PNG nativos; HEIC nativo no Safari e, nos outros navegadores, via libheif (WASM, \~2 MB) carregado só quando um HEIC chega (fora do pré-cache do service worker; fica em cache depois do primeiro uso). Pixels de HEIC decodificados pelo libheif são tratados como Display P3, o espaço das fotos do iPhone; o EXIF é lido do item `Exif` do contêiner.
 
 **Presets:**
 
@@ -167,7 +167,7 @@ O resultado de um XMP importado é uma aproximação: as fórmulas da Adobe não
 - JPEG em Display P3 com perfil ICC embutido, qualidade ajustável.
 - EXIF copiado do original (data, câmera, lente), com opção de remover a localização.
 - Destino: menu de compartilhamento (Web Share API com arquivos, onde há "Salvar imagem" no iOS) ou download comum. Os dois sempre disponíveis.
-- v1: lado maior limitado (ex.: 4096 px). Depois: resolução total por tiles.
+- Tamanho: lado maior limitado a 4096 px (a fonte usada na edição) ou resolução total, que decodifica o original de novo e renderiza em tiles.
 
 **Copiar e colar ajustes:** copiar de uma foto e colar escolhendo grupos (preset e intensidade, luz, cor, curvas, HSL, color grading, efeitos, detalhe). Recorte desmarcado por padrão. Colar em várias fotos selecionadas da biblioteca de uma vez.
 

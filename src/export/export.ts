@@ -5,7 +5,10 @@
 import type { Frame, Renderer } from '../engine/renderer';
 import { sanitizeExif } from './exif';
 import { buildDisplayP3Icc } from './icc';
-import { extractExif, insertSegments } from './jpeg';
+import { insertSegments } from './jpeg';
+import { extractAnyExif } from './exif-source';
+
+const MAX_EXIF_BYTES = 65_000;
 import type { EncodeRequest } from './encode.worker';
 
 export interface ExportOptions {
@@ -50,8 +53,10 @@ export function finalizeJpeg(
   opts: { stripLocation: boolean; width: number; height: number },
 ): Uint8Array {
   iccCache ??= buildDisplayP3Icc();
-  const exifSrc = original ? extractExif(original) : null;
-  const exif = exifSrc ? sanitizeExif(exifSrc, opts) : null;
+  const exifSrc = original ? extractAnyExif(original) : null;
+  let exif = exifSrc ? sanitizeExif(exifSrc, opts) : null;
+  // O segmento APP1 do JPEG cabe no máximo ~64 KB; EXIF maior fica de fora.
+  if (exif && exif.length > MAX_EXIF_BYTES) exif = null;
   return insertSegments(jpeg, { exif, icc: iccCache });
 }
 

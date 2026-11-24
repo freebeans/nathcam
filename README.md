@@ -23,3 +23,5 @@ Estrutura:
 - `public/presets`, `public/luts`: presets oficiais; `presets/manifest.json` é gerado no build.
 
 Os presets do cssco são MIT, © 2016 Lauren Waller (ver `public/luts/LICENSE-cssco.txt`).
+
+HEIC em navegadores sem suporte nativo usa o [libheif](https://github.com/strukturag/libheif) via [libheif-js](https://github.com/catdad-experiments/libheif-js) (LGPL-3.0), sem modificações, carregado como um módulo separado (`node_modules/libheif-js/libheif-wasm/LICENSE`). A codificação JPEG usa MozJPEG via [jSquash](https://github.com/jamsinclair/jSquash).

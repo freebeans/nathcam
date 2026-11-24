@@ -36,6 +36,16 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,json,cube,wasm,png,svg,webmanifest}'],
+        // libheif (~2 MB) só é baixado quando chega um HEIC que o navegador não
+        // abre sozinho (o Safari abre); depois fica em cache para uso offline.
+        globIgnores: ['**/libheif-*.js'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => /\/libheif-[^/]*\.js$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'libheif', expiration: { maxEntries: 2 } },
+          },
+        ],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         skipWaiting: false,
         clientsClaim: false,
