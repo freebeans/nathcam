@@ -100,7 +100,11 @@ export class Renderer {
   private targets = new Map<string, Target>();
   private vao: WebGLVertexArrayObject;
 
-  constructor(readonly canvas: HTMLCanvasElement | OffscreenCanvas) {
+  constructor(
+    readonly canvas: HTMLCanvasElement | OffscreenCanvas,
+    /** Força texturas intermediárias de 8 bits (para testar o caminho de fallback). */
+    opts: { forceLowPrecision?: boolean } = {},
+  ) {
     const gl = canvas.getContext('webgl2', {
       alpha: false,
       antialias: false,
@@ -112,7 +116,8 @@ export class Renderer {
     if (!gl) throw new Error('WebGL2 não está disponível neste navegador.');
     this.gl = gl;
 
-    const float16 = !!gl.getExtension('EXT_color_buffer_float') || !!gl.getExtension('EXT_color_buffer_half_float');
+    const float16 =
+      !opts.forceLowPrecision && (!!gl.getExtension('EXT_color_buffer_float') || !!gl.getExtension('EXT_color_buffer_half_float'));
     let p3Display = false;
     if ('drawingBufferColorSpace' in gl) {
       try {
@@ -319,7 +324,9 @@ export class Renderer {
       u_b: UNIT.b,
       u_bOrigin: [plan.b.x, plan.b.y],
       u_bSize: [plan.b.w, plan.b.h],
-      u_sharpenRadius: Math.max(0.5, radii.sharpenRadius),
+      // Sempre proporcional: numa pré-visualização pequena o raio fica abaixo de
+      // 1 px e o efeito some, como some na exportação vista nesse tamanho.
+      u_sharpenRadius: radii.sharpenRadius,
       u_outP3: out ? 1 : this.caps.p3Display ? 1 : 0,
     });
 

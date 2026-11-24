@@ -72,8 +72,29 @@
     });
   });
 
-  function hold(on: boolean) {
-    editor.showOriginal = on;
+  /** Tempo que o dedo precisa ficar na foto para mostrar o original (um toque rápido não pisca). */
+  const HOLD_MS = 250;
+  /** Movimento que cancela o "segurar" (o dedo está arrastando, não segurando). */
+  const HOLD_SLOP_PX = 10;
+  let holdTimer = 0;
+  let holdStart: { x: number; y: number } | null = null;
+
+  function startHold(e: PointerEvent) {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    holdStart = { x: e.clientX, y: e.clientY };
+    clearTimeout(holdTimer);
+    holdTimer = window.setTimeout(() => (editor.showOriginal = true), HOLD_MS);
+  }
+
+  function moveHold(e: PointerEvent) {
+    if (holdStart && !editor.showOriginal && Math.hypot(e.clientX - holdStart.x, e.clientY - holdStart.y) > HOLD_SLOP_PX)
+      endHold();
+  }
+
+  function endHold() {
+    clearTimeout(holdTimer);
+    holdStart = null;
+    editor.showOriginal = false;
   }
 </script>
 
@@ -83,12 +104,10 @@
     class:hidden={!editor.photo}
     style:width={size ? `${size.w / dpr}px` : '0'}
     style:height={size ? `${size.h / dpr}px` : '0'}
-    onpointerdown={(e) => {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-      hold(true);
-    }}
-    onpointerup={() => hold(false)}
-    onpointercancel={() => hold(false)}
+    onpointerdown={startHold}
+    onpointermove={moveHold}
+    onpointerup={endHold}
+    onpointercancel={endHold}
     oncontextmenu={(e) => e.preventDefault()}
     aria-label="Foto. Segure para ver o original."
   ></canvas>

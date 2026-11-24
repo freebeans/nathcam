@@ -149,7 +149,16 @@ describe('motor', () => {
     const big = new Renderer(new OffscreenCanvas(1, 1));
     big.setSource(testImage(W * 4, H * 4));
     try {
-      const f = frame({ clarity: 50, texture: 30, contrast: 25, shadows: 30, vignette: -30, grain: 30, temperature: 20 });
+      const f = frame({
+        clarity: 50,
+        texture: 30,
+        contrast: 25,
+        shadows: 30,
+        vignette: -30,
+        grain: 30,
+        temperature: 20,
+        sharpening: 100,
+      });
       const preview = big.read(f, W, H);
       const exportPx = big.read(f, W * 4, H * 4);
       const reduced = downsample(exportPx, W * 4, H * 4, 4);
@@ -158,6 +167,38 @@ describe('motor', () => {
     } finally {
       big.dispose();
     }
+  });
+});
+
+describe('fallback de 8 bits', () => {
+  let low: Renderer;
+  beforeAll(() => {
+    low = new Renderer(new OffscreenCanvas(1, 1), { forceLowPrecision: true });
+    low.setSource(input);
+  });
+  afterAll(() => low.dispose());
+
+  it('usa texturas de 8 bits quando forçado', () => {
+    expect(low.caps.float16).toBe(false);
+  });
+
+  it('receita neutra continua devolvendo a entrada', () => {
+    const { mean, max } = diffStats(low.read(frame({}), W, H), new Uint8Array(input.data.buffer));
+    expect(max).toBeLessThanOrEqual(4);
+    expect(mean).toBeLessThan(1.2);
+  });
+
+  it('fica perto do caminho em float, sem faixas sistemáticas', () => {
+    const f = frame({ exposure: -0.6, contrast: 40, shadows: 40, clarity: 30, saturation: 20 });
+    const a = low.read(f, W, H);
+    const b = renderer.read(f, W, H);
+    const { mean } = diffStats(a, b);
+    expect(mean).toBeLessThan(1.5);
+    // Na rampa de cinza, o erro médio por coluna fica perto de zero (o dithering
+    // espalha a quantização em vez de acumulá-la em degraus).
+    let bias = 0;
+    for (let x = 0; x < W; x++) for (let y = 4; y < 40; y++) bias += a[(y * W + x) * 4] - b[(y * W + x) * 4];
+    expect(Math.abs(bias / (W * 36))).toBeLessThan(0.6);
   });
 });
 

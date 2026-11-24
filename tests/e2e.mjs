@@ -58,6 +58,20 @@ try {
   await page.getByRole('button', { name: 'C1' }).click();
   await page.getByText('Intensidade · C1').waitFor();
   check(true, 'preset C1 aplicado');
+
+  // ---- segurar para ver o original (um toque rápido não pisca)
+  const box = await page.locator('.viewer canvas').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  const flashedOnTap = await page.locator('.badge').isVisible();
+  await page.mouse.up();
+  check(!flashedOnTap, 'toque rápido não mostra o original');
+  await page.mouse.down();
+  await page.waitForTimeout(400);
+  const shownOnHold = await page.locator('.badge').isVisible();
+  await page.mouse.up();
+  check(shownOnHold, 'segurar mostra o original');
+  check(!(await page.locator('.badge').isVisible()), 'soltar volta à edição');
   if (screenshots) await page.screenshot({ path: join(screenshots, 'presets.png') });
 
   // ---- nível 2: arrastar um slider e medir quadros

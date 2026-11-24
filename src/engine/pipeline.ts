@@ -67,7 +67,15 @@ uniform vec2 u_bSize;
 
 const INTERMEDIATE_OUTPUT = /* glsl */ `
   float yOut = encode1(luma(rgb));
-  outColor = u_lowp == 1 ? vec4(clamp(encode(rgb), 0.0, 1.0), clamp(yOut, 0.0, 1.0)) : vec4(rgb, yOut);
+  if (u_lowp == 1) {
+    // 8 bits: guarda valores codificados com dithering triangular de 1 LSB,
+    // para que a quantização intermediária não crie faixas em degradês.
+    vec2 gp = floor(px);
+    float d = (hash1(gp, 3u) + hash1(gp, 5u) - 1.0) / 255.0;
+    outColor = vec4(clamp(encode(rgb) + d, 0.0, 1.0), clamp(yOut + d, 0.0, 1.0));
+  } else {
+    outColor = vec4(rgb, yOut);
+  }
 `;
 
 /** Monta o fragment shader de um pass a partir das etapas, na ordem do pipeline. */
