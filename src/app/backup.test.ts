@@ -108,3 +108,30 @@ describe('backup .zip', () => {
     await expect(restoreBackup(b.db, bad)).rejects.toThrow(/LUT/);
   });
 });
+
+describe('backup .zip: entradas hostis', () => {
+  const pack = (json: object, extra: Record<string, Uint8Array> = {}) => zipSync({ 'backup.json': strToU8(JSON.stringify(json)), ...extra });
+  const base = { format: 'nathcam-backup', version: 1 };
+
+  it('recusa arquivos que descompactam para tamanhos enormes (zip bomb)', async () => {
+    const bomb = zipSync({ 'backup.json': strToU8(JSON.stringify({ ...base, presets: [], luts: [], meta: [] })), 'luts/x.bin': new Uint8Array(80 * 1024 * 1024) });
+    expect(bomb.length).toBeLessThan(1024 * 1024);
+    await expect(restoreBackup(b.db, bomb)).rejects.toThrow(/grande/);
+  });
+
+  it('entradas nulas ou malformadas são ignoradas, sem erro', async () => {
+    const res = await restoreBackup(b.db, pack({ ...base, presets: [null, 3, { id: 'ok', name: 'Ok', pack: 'meus', params: {} }], luts: [null], meta: [null] }));
+    expect(res.presets).toBe(1);
+  });
+
+  it('id de LUT com caracteres estranhos é recusado', async () => {
+    await expect(
+      restoreBackup(b.db, pack({ ...base, presets: [], meta: [], luts: [{ id: '../x', size: 2, domainMin: [0, 0, 0], domainMax: [1, 1, 1], file: 'luts/a.bin' }] }, { 'luts/a.bin': new Uint8Array(96) })),
+    ).rejects.toThrow(/LUT/);
+  });
+
+  it('preset apontando para LUT local que não existe fica sem LUT', async () => {
+    await restoreBackup(b.db, pack({ ...base, luts: [], meta: [], presets: [{ id: 'p', name: 'P', pack: 'meus', params: {}, lut: { src: 'local:nao-existe', colorSpace: 'srgb' } }] }));
+    expect((await b.store.list())[0].lut).toBeNull();
+  });
+});

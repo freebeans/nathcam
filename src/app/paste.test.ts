@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { PresetRecipe, Recipe } from '../engine/recipe';
 import { cropFits, fullCrop, straightenCrop } from '../engine/crop';
 import { DEFAULT_GROUPS, PASTE_GROUPS, pasteRecipe } from './paste';
-import { emptyRecipe } from './recipe-edit';
+import { emptyRecipe, flattenRecipe } from './recipe-edit';
+import { resolveEffective } from '../engine/layers';
 
 const preset: PresetRecipe = { id: 'c1', name: 'C1', pack: 'cssco', params: {}, lut: null, engineVersion: 1 };
 
@@ -75,5 +76,59 @@ describe('pasteRecipe', () => {
     const out = pasteRecipe(target, src, new Set(['crop']), { w: 4000, h: 1000 });
     expect(cropFits(4000, 1000, out.crop!)).toBe(true);
     expect(out.crop!.angle).toBe(20);
+  });
+});
+
+describe('pasteRecipe: origem achatada', () => {
+  const lutPreset: PresetRecipe = {
+    id: 'c1', name: 'C1', pack: 'cssco', engineVersion: 1,
+    params: { exposure: 0.5, contrast: 20, fade: 10 },
+    lut: { src: 'luts/c1.cube', colorSpace: 'srgb' },
+  };
+  const flat = flattenRecipe({ ...emptyRecipe(), preset: lutPreset, intensity: 0.5, user: { exposure: 0.2, saturation: -20 } });
+
+  it('só "Luz" leva os valores de luz que se veem, e nada de efeitos ou preset', () => {
+    const out = pasteRecipe(emptyRecipe(), flat, new Set(['light']), { w: 4000, h: 3000 });
+    const eff = resolveEffective(out).params;
+    expect(eff.exposure).toBeCloseTo(0.45); // 0.5 * 0.5 + 0.2
+    expect(eff.contrast).toBeCloseTo(10);
+    expect(eff.fade).toBe(0);
+    expect(eff.saturation).toBe(0);
+    expect(out.preset).toBeNull();
+  });
+
+  it('"Preset e intensidade" leva só a LUT, com a mesma força', () => {
+    const out = pasteRecipe(emptyRecipe(), flat, new Set(['preset']), { w: 4000, h: 3000 });
+    expect(resolveEffective(out).lut).toEqual(resolveEffective(flat).lut);
+    expect(resolveEffective(out).params.exposure).toBe(0);
+    expect(out.flattened).toBeFalsy();
+  });
+
+  it('colar tudo de uma foto achatada dá o mesmo resultado', () => {
+    const out = pasteRecipe(emptyRecipe(), flat, DEFAULT_GROUPS, { w: 4000, h: 3000 });
+    const a = resolveEffective(flat).params;
+    const b = resolveEffective(out).params;
+    for (const k of ['exposure', 'contrast', 'fade', 'saturation'] as const) expect(b[k]).toBeCloseTo(a[k]);
+  });
+});
+
+describe('pasteRecipe: recorte com proporção travada', () => {
+  it('mantém a proporção em pixels numa foto de outro formato', () => {
+    const square = { ...fullCrop(), x: 0.125, w: 0.75, h: 1, aspect: 1 }; // 1:1 numa foto 4000x3000
+    const out = pasteRecipe(emptyRecipe(), { ...emptyRecipe(), crop: square }, new Set(['crop']), { w: 3000, h: 4000 });
+    const c = out.crop!;
+    expect((c.w * 3000) / (c.h * 4000)).toBeCloseTo(1, 4);
+    expect(cropFits(3000, 4000, c)).toBe(true);
+  });
+});
+
+describe('pasteRecipe: destino achatado', () => {
+  it('colar luz numa foto achatada dá exatamente a luz da origem', () => {
+    const flatTarget = flattenRecipe({ ...emptyRecipe(), user: { exposure: 1, fade: 20 } });
+    const src = { ...emptyRecipe(), user: { exposure: 0.5 } };
+    const out = pasteRecipe(flatTarget, src, new Set(['light']), { w: 4000, h: 3000 });
+    const eff = resolveEffective(out).params;
+    expect(eff.exposure).toBeCloseTo(0.5);
+    expect(eff.fade).toBeCloseTo(20);
   });
 });

@@ -7,6 +7,7 @@ import {
   NUMERIC_PARAM_BY_PATH,
   getPath,
   setPath,
+  type Curve,
   type NumericParamSpec,
   type PartialParams,
 } from '../engine/params';
@@ -148,4 +149,36 @@ export function sliderModel(r: Recipe, path: string, target: SliderTarget): Slid
   }
   const [min, max] = userDeltaRange(spec);
   return { value: user, min, max, neutral: 0, step: spec.step, apply: (rr, v) => setUserParam(rr, path, v) };
+}
+
+/**
+ * O inverso de achatar, para colar: uma receita em camadas que renderiza
+ * igual, com o preset reduzido à LUT e todos os valores na camada do
+ * usuário. Assim cada grupo colado leva só o que é dele.
+ */
+export function unflattenRecipe(r: Recipe): Recipe {
+  if (!r.flattened) return r;
+  const p = r.preset;
+  const user: Record<string, unknown> = {};
+  for (const s of NUMERIC_PARAMS) {
+    const pv = getPath(p?.params, s.path);
+    const uv = getPath(r.user, s.path);
+    const pn = typeof pv === 'number' ? pv : undefined;
+    const un = typeof uv === 'number' ? uv : undefined;
+    if (s.kind === 'hue') {
+      const v = un ?? pn;
+      if (v !== undefined) setPath(user, s.path, v);
+    } else if (pn !== undefined || un !== undefined) {
+      const delta = (pn ?? s.neutral) - s.neutral + (un ?? 0);
+      if (delta !== 0) setPath(user, s.path, delta);
+    }
+  }
+  for (const ch of CURVE_CHANNELS) {
+    const layers = [p?.params.curves?.[ch], r.user.curves?.[ch]].filter((c): c is Curve => !!c && c.length >= 2);
+    if (layers.length) setPath(user, `curves.${ch}`, layers.length === 1 ? layers[0] : composeCurves(layers));
+  }
+  const bands = { ...(p?.params.hslBands ?? {}), ...(r.user.hslBands ?? {}) };
+  if (Object.keys(bands).length) user.hslBands = bands;
+  const preset = p?.lut ? { ...p, params: {} } : null;
+  return { ...r, preset, intensity: 1, user: user as PartialParams, flattened: false };
 }

@@ -67,7 +67,8 @@
     const frame = editor.frame;
     const s = size;
     void editor.photo;
-    if (!ready || !s || !editor.photo) return;
+    // Com a fonte trocada (exportação em resolução total), não desenha.
+    if (!ready || !s || !editor.photo || editor.sourceSwapped) return;
     cancelAnimationFrame(pending);
     pending = requestAnimationFrame(() => {
       try {

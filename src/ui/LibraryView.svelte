@@ -9,7 +9,7 @@
     onopen,
     onimport,
     onpaste,
-    onmenu,
+    onbackup,
   }: {
     gallery: Gallery;
     batch: { done: number; total: number } | null;
@@ -17,7 +17,7 @@
     onopen: (p: PhotoRecord) => void;
     onimport: () => void;
     onpaste: () => void;
-    onmenu: () => void;
+    onbackup: () => void;
   } = $props();
 
   // URLs das miniaturas, recriadas quando a lista muda.
@@ -30,6 +30,7 @@
   });
 
   function tap(p: PhotoRecord) {
+    if (batch) return;
     if (gallery.selecting) gallery.toggle(p.id);
     else onopen(p);
   }
@@ -45,14 +46,14 @@
 <div class="library">
   <header class="top">
     {#if gallery.selecting}
-      <button class="link" onclick={() => gallery.setSelecting(false)}>Cancelar</button>
+      <button class="link" disabled={!!batch} onclick={() => gallery.setSelecting(false)}>Cancelar</button>
       <span class="title">{gallery.selected.size} selecionada{gallery.selected.size === 1 ? '' : 's'}</span>
-      <button class="link danger" disabled={!gallery.selected.size} onclick={remove}>Apagar</button>
+      <button class="link danger" disabled={!gallery.selected.size || !!batch} onclick={remove}>Apagar</button>
     {:else}
       <button class="link" disabled={!gallery.photos.length} onclick={() => gallery.setSelecting(true)}>Selecionar</button>
       <span class="title">nathcam</span>
       <span class="right">
-        <button class="link" aria-label="Backup dos presets" onclick={onmenu}>⋯</button>
+        <button class="link" aria-label="Backup dos presets" onclick={onbackup}>⋯</button>
         <button class="link" onclick={onimport}>Importar</button>
       </span>
     {/if}

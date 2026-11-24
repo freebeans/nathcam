@@ -1,5 +1,5 @@
 /** EXIF (TIFF) do arquivo original, seja JPEG ou HEIC. */
-import { extractHeicExif } from './heic-exif';
+import { extractHeicExif } from './heif-container';
 import { extractExif } from './jpeg';
 
 export function extractAnyExif(file: Uint8Array): Uint8Array | null {

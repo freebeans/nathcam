@@ -3,9 +3,10 @@
  * ajustes"). Cada grupo substitui por inteiro a parte correspondente da
  * receita de destino: um grupo sem ajustes na origem zera esse grupo.
  */
-import { cropFits, straightenCrop } from '../engine/crop';
+import { aspectCrop, cropFits, straightenCrop } from '../engine/crop';
 import type { PartialParams } from '../engine/params';
 import type { Recipe } from '../engine/recipe';
+import { unflattenRecipe } from './recipe-edit';
 
 export type PasteGroupId = 'preset' | 'light' | 'color' | 'curves' | 'hsl' | 'grading' | 'effects' | 'detail' | 'crop';
 
@@ -41,8 +42,11 @@ export function pasteRecipe(
   groups: ReadonlySet<PasteGroupId>,
   size: { w: number; h: number },
 ): Recipe {
-  const src = structuredClone(source);
-  const out: Recipe = { ...target, user: { ...target.user } };
+  // Receita achatada: tudo mora no "preset"; desfaz isso para cada grupo levar só o seu.
+  const src = structuredClone(unflattenRecipe(source));
+  // O destino também: colar luz numa foto achatada deve dar a luz da origem.
+  const base = unflattenRecipe(target);
+  const out: Recipe = { ...base, user: { ...base.user } };
   const user = out.user as Record<string, unknown>;
   const from = src.user as Record<string, unknown>;
 
@@ -60,7 +64,9 @@ export function pasteRecipe(
   }
   if (groups.has('crop')) {
     let crop = src.crop;
-    if (crop && !cropFits(size.w, size.h, crop)) crop = straightenCrop(size.w, size.h, crop, crop.angle);
+    // Proporção travada vale em pixels: refaz o maior recorte com ela nesta foto.
+    if (crop?.aspect) crop = aspectCrop(size.w, size.h, crop, crop.aspect);
+    else if (crop && !cropFits(size.w, size.h, crop)) crop = straightenCrop(size.w, size.h, crop, crop.angle);
     out.crop = crop;
   }
   return out;

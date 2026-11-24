@@ -7,8 +7,6 @@ import { sanitizeExif } from './exif';
 import { buildDisplayP3Icc } from './icc';
 import { insertSegments } from './jpeg';
 import { extractAnyExif } from './exif-source';
-
-const MAX_EXIF_BYTES = 65_000;
 import type { EncodeRequest } from './encode.worker';
 
 export interface ExportOptions {
@@ -28,6 +26,9 @@ export function exportSize(srcW: number, srcH: number, maxSide: number): { w: nu
 }
 
 let iccCache: Uint8Array | null = null;
+
+/** O segmento APP1 do JPEG comporta no máximo ~64 KB. */
+const MAX_EXIF_BYTES = 65_000;
 
 export function encodeJpeg(pixels: Uint8Array, width: number, height: number, quality: number): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
@@ -68,9 +69,12 @@ export async function exportJpeg(
   original: Uint8Array | null,
   opts: ExportOptions,
   onProgress?: (fraction: number) => void,
+  /** Chamado assim que os pixels saem da GPU, antes de codificar (para liberar memória). */
+  onRendered?: () => void,
 ): Promise<Blob> {
   const { w, h } = exportSize(output.w, output.h, opts.maxSide);
   const pixels = await renderer.readTiled(frame, w, h, 2048, (d, t) => onProgress?.((0.7 * d) / t));
+  onRendered?.();
   const jpeg = await encodeJpeg(pixels, w, h, opts.quality);
   onProgress?.(0.95);
   const out = finalizeJpeg(jpeg, original, { stripLocation: opts.stripLocation, width: w, height: h });

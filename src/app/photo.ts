@@ -1,6 +1,7 @@
 /** Decodificação de fotos (JPEG, PNG; HEIC só onde o navegador decodifica nativamente). */
 import { readExifSummary, type ExifSummary } from '../export/exif';
 import { extractAnyExif } from '../export/exif-source';
+import { heifColorSpace } from '../export/heif-container';
 import { heicToRgba, looksLikeHeic } from './heic';
 import { fitSize } from './recipe-edit';
 
@@ -30,21 +31,24 @@ export async function decodeImage(blob: Blob, name: string, maxSide: number): Pr
   } catch {
     const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
     if (!looksLikeHeic(blob.type, name, head)) throw new Error(`${name}: não foi possível abrir. Use JPEG, PNG ou HEIC.`);
-    probe = await decodeHeicBitmap(blob, name);
+    return decodeHeicBitmap(blob, name, maxSide);
   }
   if (Math.max(probe.width, probe.height) <= maxSide) return probe;
   const { w, h } = fitSize(probe.width, probe.height, maxSide, maxSide, maxSide);
-  const resized = await createImageBitmap(probe, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
+  // Libera a versão grande antes de decodificar de novo já reduzida (pico menor de memória).
   probe.close();
-  return resized;
+  return createImageBitmap(blob, { imageOrientation: 'from-image', resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
 }
 
 /** HEIC sem suporte nativo: libheif em WASM, carregado agora. */
-async function decodeHeicBitmap(blob: Blob, name: string): Promise<ImageBitmap> {
+async function decodeHeicBitmap(blob: Blob, name: string, maxSide: number): Promise<ImageBitmap> {
   try {
-    const img = await heicToRgba(new Uint8Array(await blob.arrayBuffer()));
-    const data = new ImageData(img.data as Uint8ClampedArray<ArrayBuffer>, img.width, img.height, { colorSpace: 'display-p3' });
-    return await createImageBitmap(data);
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const img = await heicToRgba(bytes);
+    const colorSpace = heifColorSpace(bytes);
+    const data = new ImageData(img.data as Uint8ClampedArray<ArrayBuffer>, img.width, img.height, { colorSpace });
+    const { w, h } = fitSize(img.width, img.height, maxSide, maxSide, maxSide);
+    return await createImageBitmap(data, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
   } catch (e) {
     throw new Error(`${name}: não foi possível abrir o HEIC (${e instanceof Error ? e.message : String(e)}).`);
   }

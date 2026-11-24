@@ -17,6 +17,12 @@ import { applyPreset, emptyRecipe, fitSize, flattenRecipe, sliderModel, type Sli
 
 export type Level = 'presets' | 'basic' | 'advanced';
 
+/**
+ * Lado maior na exportação em resolução total: 8192 px (~50 MP) cobre os
+ * 48 MP do iPhone e limita a memória no Safari (textura + pixels + JPEG).
+ */
+const FULL_EXPORT_MAX_SIDE = 8192;
+
 /** Lado maior das miniaturas dos presets (proxy). */
 const THUMB_SIDE = 160;
 /** Espera depois da última edição antes de gravar no IndexedDB. */
@@ -114,6 +120,10 @@ export class Editor {
 
   /** Abre uma foto da biblioteca com a receita e o histórico gravados. */
   async open(rec: PhotoRecord): Promise<void> {
+    if (this.batchRunning) {
+      this.error = 'Aguarde terminar de colar os ajustes.';
+      return;
+    }
     const seq = ++this.openSeq;
     this.error = null;
     this.busy = true;
@@ -148,6 +158,8 @@ export class Editor {
 
   /** Grava o que estiver pendente e solta a foto. */
   async close(): Promise<void> {
+    // Uma exportação em andamento usa a foto e o motor: espera terminar.
+    await this.exportJob;
     await this.flush();
     this.photo?.bitmap.close();
     this.photo = null;
@@ -157,15 +169,37 @@ export class Editor {
 
   // ---- exportação
 
+  /**
+   * A fonte do motor foi trocada (exportação em resolução total, colar em
+   * lote): a pré-visualização e as miniaturas esperam.
+   */
+  sourceSwapped = $state(false);
+  /** Colar em lote em andamento: abrir uma foto espera. */
+  batchRunning = $state(false);
+  private exportJob: Promise<unknown> = Promise.resolve();
+
   /** A foto pode ter mais resolução do que a fonte usada na edição. */
-  canExportFull = $derived(!!this.photo && Math.max(this.photo.width, this.photo.height) >= SOURCE_MAX_SIDE);
+  canExportFull = $derived(
+    !!this.photo &&
+      Math.max(this.photo.width, this.photo.height) >= SOURCE_MAX_SIDE &&
+      (this.renderer?.caps.maxTextureSize ?? 0) > SOURCE_MAX_SIDE,
+  );
 
   /**
    * Exporta a foto aberta. Em resolução total, decodifica o original de novo
    * (até o limite de textura), carrega sem mipmaps, renderiza em tiles com o
    * mesmo motor e devolve a fonte da edição.
    */
-  async exportPhoto(
+  exportPhoto(
+    opts: { quality: number; stripLocation: boolean; full: boolean },
+    onProgress?: (f: number) => void,
+  ): Promise<{ blob: Blob; width: number; height: number }> {
+    const job = this.runExport(opts, onProgress);
+    this.exportJob = job.catch(() => null);
+    return job;
+  }
+
+  private async runExport(
     opts: { quality: number; stripLocation: boolean; full: boolean },
     onProgress?: (f: number) => void,
   ): Promise<{ blob: Blob; width: number; height: number }> {
@@ -180,17 +214,29 @@ export class Editor {
       const s = exportSize(output.w, output.h, DEFAULT_EXPORT.maxSide);
       return { blob, width: s.w, height: s.h };
     }
-    const full = await decodeImage(new Blob([photo.bytes as Uint8Array<ArrayBuffer>]), photo.name, r.caps.maxTextureSize);
+    const maxSide = Math.min(r.caps.maxTextureSize, FULL_EXPORT_MAX_SIDE);
+    const fullBitmap = await decodeImage(new Blob([photo.bytes as Uint8Array<ArrayBuffer>]), photo.name, maxSide);
+    const fullSize = { width: fullBitmap.width, height: fullBitmap.height };
+    let restored = false;
+    const restore = () => {
+      if (restored) return;
+      restored = true;
+      r.releaseTargets();
+      // Devolve a fonte da edição antes de codificar: a textura grande sai da memória.
+      r.setSource(photo.bitmap);
+      this.sourceSwapped = false;
+    };
     try {
-      r.setSource(full, { mipmaps: false });
-      const output = cropOutputSize(full.width, full.height, recipe.crop);
-      const blob = await exportJpeg(r, this.frameFor(recipe, full), output, photo.bytes, { ...base, maxSide: Infinity }, onProgress);
+      this.sourceSwapped = true;
+      r.setSource(fullBitmap, { mipmaps: false });
+      fullBitmap.close(); // já está na GPU
+      const output = cropOutputSize(fullSize.width, fullSize.height, recipe.crop);
+      const blob = await exportJpeg(r, this.frameFor(recipe, fullSize), output, photo.bytes, { ...base, maxSide: Infinity }, onProgress, restore);
       return { blob, width: output.w, height: output.h };
     } finally {
-      full.close();
-      r.releaseTargets();
-      // A foto pode ter sido trocada enquanto exportava.
-      if (this.photo) r.setSource(this.photo.bitmap);
+      fullBitmap.close();
+      restore();
+      void this.renderThumbs({ onlyMissing: true });
     }
   }
 
@@ -214,9 +260,24 @@ export class Editor {
    */
   async pasteInto(recs: PhotoRecord[], groups: ReadonlySet<PasteGroupId>, onProgress?: (done: number) => void): Promise<string[]> {
     const source = this.copied;
-    const r = this.renderer;
-    if (!source || !r) return [];
+    if (!source) return [];
+    if (!this.renderer) throw new Error('O motor de renderização não está disponível.');
     if (this.photo) throw new Error('Feche a foto aberta antes de colar em lote.');
+    if (this.batchRunning) throw new Error('Já existe uma colagem em andamento.');
+    this.batchRunning = true;
+    try {
+      return await this.pasteEach(recs, source, groups, onProgress);
+    } finally {
+      this.batchRunning = false;
+    }
+  }
+
+  private async pasteEach(
+    recs: PhotoRecord[],
+    source: Recipe,
+    groups: ReadonlySet<PasteGroupId>,
+    onProgress?: (done: number) => void,
+  ): Promise<string[]> {
     const errors: string[] = [];
     for (let i = 0; i < recs.length; i++) {
       const rec = recs[i];
@@ -498,7 +559,7 @@ export class Editor {
     for (const p of ordered) {
       if (out.has(p.id)) continue;
       if (p.lut) await loadLut(p.lut.src).catch(() => null);
-      if (job !== this.thumbJob || !this.renderer) return;
+      if (job !== this.thumbJob || !this.renderer || this.sourceSwapped) return;
       out.set(p.id, this.renderThumb({ ...applyPreset(emptyRecipe(), p), crop }, w, h));
       this.thumbs = new Map(out);
       await new Promise((res) => setTimeout(res, 0));

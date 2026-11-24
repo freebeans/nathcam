@@ -1,11 +1,14 @@
 /**
  * HEIC/HEIF: o Safari decodifica nativamente; nos outros navegadores, o
- * libheif (WASM, LGPL-3.0) é carregado só quando um HEIC chega.
- *
- * Os pixels são tratados como Display P3, o espaço das fotos do iPhone.
+ * libheif (WASM, LGPL-3.0) é carregado só quando um HEIC chega. O espaço de
+ * cor vem do contêiner (ver `heifColorSpace`).
  */
+import type { default as LibHeifFactory } from 'libheif-js/libheif-wasm/libheif-bundle.mjs';
 
-/** Pelo tipo, extensão ou assinatura (`ftyp` heic/heix/mif1/msf1). */
+/** Uma instância do WASM para o app inteiro (cada uma tem seu próprio heap). */
+let lib: ReturnType<typeof LibHeifFactory> | null = null;
+
+/** Pelo tipo, extensão ou assinatura (`ftyp` heic/heix/hevc/mif1/msf1). */
 export function looksLikeHeic(type: string, name: string, head?: Uint8Array): boolean {
   if (/image\/hei[cf]/.test(type) || /\.hei[cf]$/i.test(name)) return true;
   if (!head || head.length < 12) return false;
@@ -21,9 +24,8 @@ export interface Rgba {
 
 /** Decodifica a imagem principal (com rotação/espelho do contêiner aplicados). */
 export async function heicToRgba(bytes: Uint8Array): Promise<Rgba> {
-  const mod = await import('libheif-js/libheif-wasm/libheif-bundle.mjs');
-  const lib = await mod.default();
-  const images = new lib.HeifDecoder().decode(bytes);
+  lib ??= import('libheif-js/libheif-wasm/libheif-bundle.mjs').then((m) => m.default());
+  const images = new (await lib).HeifDecoder().decode(bytes);
   const img = images[0];
   if (!img) throw new Error('HEIC sem imagem.');
   try {

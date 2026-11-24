@@ -173,7 +173,7 @@
       onopen={openPhoto}
       onimport={() => fileInput.click()}
       onpaste={() => (pasting = 'selected')}
-      onmenu={() => (backup = true)}
+      onbackup={() => (backup = true)}
     />
   {/if}
 </div>

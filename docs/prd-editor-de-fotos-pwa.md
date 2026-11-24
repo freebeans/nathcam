@@ -149,7 +149,7 @@ Tudo fica no IndexedDB do aparelho, tratado como área de trabalho: o original c
 
 O app importa quatro formatos de preset e exporta JPEG P3 com EXIF, por compartilhamento ou download.
 
-**Imagens de entrada:** JPEG e PNG nativos; HEIC nativo no Safari e, nos outros navegadores, via libheif (WASM, \~2 MB) carregado só quando um HEIC chega (fora do pré-cache do service worker; fica em cache depois do primeiro uso). Pixels de HEIC decodificados pelo libheif são tratados como Display P3, o espaço das fotos do iPhone; o EXIF é lido do item `Exif` do contêiner.
+**Imagens de entrada:** JPEG e PNG nativos; HEIC nativo no Safari e, nos outros navegadores, via libheif (WASM, \~2 MB) carregado só quando um HEIC chega (fora do pré-cache do service worker; fica em cache depois do primeiro uso). O espaço de cor do HEIC decodificado pelo libheif vem do contêiner (`colr`: CICP ou perfil ICC; P3 e BT.2020 viram Display P3, o resto sRGB); o EXIF é lido do item `Exif` do contêiner.
 
 **Presets:**
 
@@ -167,7 +167,7 @@ O resultado de um XMP importado é uma aproximação: as fórmulas da Adobe não
 - JPEG em Display P3 com perfil ICC embutido, qualidade ajustável.
 - EXIF copiado do original (data, câmera, lente), com opção de remover a localização.
 - Destino: menu de compartilhamento (Web Share API com arquivos, onde há "Salvar imagem" no iOS) ou download comum. Os dois sempre disponíveis.
-- Tamanho: lado maior limitado a 4096 px (a fonte usada na edição) ou resolução total, que decodifica o original de novo e renderiza em tiles.
+- Tamanho: lado maior limitado a 4096 px (a fonte usada na edição) ou resolução total (até 8192 px, ~50 MP, para caber na memória do Safari iOS), que decodifica o original de novo e renderiza em tiles.
 
 **Copiar e colar ajustes:** copiar de uma foto e colar escolhendo grupos (preset e intensidade, luz, cor, curvas, HSL, color grading, efeitos, detalhe). Recorte desmarcado por padrão. Colar em várias fotos selecionadas da biblioteca de uma vez.
 
@@ -219,6 +219,7 @@ Os maiores riscos estão no Safari do iPhone (memória, cor e armazenamento) e n
 - Nome do app.
 - Fórmulas exatas da compressão de gama e da calibração (definir na fase 1 com imagens de teste).
 - Confirmar em aparelhos reais o limite de área de canvas e o tamanho máximo de textura WebGL no iOS.
+- Confirmar em aparelhos reais a memória da exportação em resolução total (48 MP: textura, pixels lidos e codificador JPEG ao mesmo tempo).
 
 ## Referências
 

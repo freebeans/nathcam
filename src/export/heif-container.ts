@@ -1,7 +1,9 @@
 /**
- * EXIF de um arquivo HEIC/HEIF: lê o contêiner (ISOBMFF), acha o item do
- * tipo `Exif` em `meta/iinf` e seus bytes em `meta/iloc`. O item começa com
- * um deslocamento de 4 bytes até o cabeçalho TIFF.
+ * Leitura do contêiner HEIC/HEIF (ISOBMFF):
+ * - EXIF: acha o item do tipo `Exif` em `meta/iinf` e seus bytes em
+ *   `meta/iloc`; o item começa com um deslocamento de 4 bytes até o TIFF.
+ * - Espaço de cor: a propriedade `colr` em `meta/iprp/ipco` (CICP `nclx` ou
+ *   perfil ICC).
  */
 
 class Reader {
@@ -80,12 +82,15 @@ function exifItemId(r: Reader, iinf: Box): number | undefined {
 function itemBytes(r: Reader, iloc: Box, itemId: number): Uint8Array | undefined {
   const version = r.u8(iloc.start);
   let o = iloc.start + 4;
-  const sizes = r.u8(o);
-  const sizes2 = r.u8(o + 1);
-  const offsetSize = sizes >> 4;
-  const lengthSize = sizes & 15;
-  const baseOffsetSize = sizes2 >> 4;
-  const indexSize = version === 1 || version === 2 ? sizes2 & 15 : 0;
+  const offsetAndLength = r.u8(o);
+  const baseAndIndex = r.u8(o + 1);
+  const offsetSize = offsetAndLength >> 4;
+  const lengthSize = offsetAndLength & 15;
+  const baseOffsetSize = baseAndIndex >> 4;
+  const indexSize = version === 1 || version === 2 ? baseAndIndex & 15 : 0;
+  // Extent de 0 bytes no índice: arquivo inválido (e um laço sem fim de fato).
+  const extentSize = indexSize + offsetSize + lengthSize;
+  if (extentSize === 0) return undefined;
   o += 2;
   const count = version < 2 ? r.u16(o) : r.u32(o);
   o += version < 2 ? 2 : 4;
@@ -102,6 +107,7 @@ function itemBytes(r: Reader, iloc: Box, itemId: number): Uint8Array | undefined
     o += baseOffsetSize;
     const extents = r.u16(o);
     o += 2;
+    if (o + extents * extentSize > iloc.end) return undefined;
     const parts: Uint8Array[] = [];
     for (let e = 0; e < extents; e++) {
       o += indexSize;
@@ -144,9 +150,41 @@ export function extractHeicExif(file: Uint8Array): Uint8Array | null {
     if (!item || item.length < 12) return null;
     const tiffStart = 4 + new Reader(item).u32(0);
     const tiff = item.slice(tiffStart);
-    const bo = String.fromCharCode(tiff[0], tiff[1]);
-    return bo === 'MM' || bo === 'II' ? tiff : null;
+    const byteOrder = String.fromCharCode(tiff[0], tiff[1]);
+    return byteOrder === 'MM' || byteOrder === 'II' ? tiff : null;
   } catch {
     return null;
+  }
+}
+
+/** CICP (ISO/IEC 23091-2) colour_primaries: 11 = DCI-P3, 12 = Display P3, 9 = BT.2020. */
+const WIDE_PRIMARIES = new Set([9, 11, 12]);
+
+function iccIsP3(icc: Uint8Array): boolean {
+  // Descrição do perfil, em ASCII (v2) ou UTF-16 (v4, mluc).
+  const ascii = String.fromCharCode(...icc.subarray(0, Math.min(icc.length, 4096)));
+  return /P3/.test(ascii) || /P\u00003/.test(ascii);
+}
+
+/**
+ * Espaço de cor dos pixels decodificados. Sem informação, ou com uma que
+ * não reconhecemos, assume sRGB (o padrão do HEIF).
+ */
+export function heifColorSpace(file: Uint8Array): 'srgb' | 'display-p3' {
+  try {
+    const r = new Reader(file);
+    const meta = [...boxes(r, 0, file.length)].find((b) => b.type === 'meta');
+    const iprp = meta && child(r, meta, 'iprp', 4);
+    const ipco = iprp && child(r, iprp, 'ipco');
+    if (!ipco) return 'srgb';
+    for (const colr of boxes(r, ipco.start, ipco.end)) {
+      if (colr.type !== 'colr') continue;
+      const kind = r.type(colr.start);
+      if (kind === 'nclx') return WIDE_PRIMARIES.has(r.u16(colr.start + 4)) ? 'display-p3' : 'srgb';
+      if (kind === 'prof' || kind === 'rICC') return iccIsP3(file.subarray(colr.start + 4, colr.end)) ? 'display-p3' : 'srgb';
+    }
+    return 'srgb';
+  } catch {
+    return 'srgb';
   }
 }

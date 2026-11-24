@@ -15,6 +15,12 @@ import { LOCAL_LUT_PREFIX } from './preset-store';
 const FORMAT = 'nathcam-backup';
 const VERSION = 1;
 const MAX_LUT_SIDE = 129;
+/** Uma LUT 129³ tem ~26 MB; nada legítimo passa disso por arquivo. */
+const MAX_ENTRY_BYTES = 32 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 512 * 1024 * 1024;
+const LUT_ID = /^[\w-]{1,100}$/;
+
+class TooLarge extends Error {}
 
 interface BackupLut extends Omit<LutRecord, 'data'> {
   file: string;
@@ -59,9 +65,18 @@ function validLut(v: unknown): PresetLut | null {
 /** Restaura um backup por cima do que existe (mesmos ids são substituídos). */
 export async function restoreBackup(db: Db, zip: Uint8Array): Promise<{ presets: number; luts: number }> {
   let files: Record<string, Uint8Array>;
+  let total = 0;
   try {
-    files = unzipSync(zip);
-  } catch {
+    // Confere os tamanhos declarados antes de descompactar (zip bomb).
+    files = unzipSync(zip, {
+      filter: (f) => {
+        total += f.originalSize;
+        if (f.originalSize > MAX_ENTRY_BYTES || total > MAX_TOTAL_BYTES) throw new TooLarge(f.name);
+        return true;
+      },
+    });
+  } catch (e) {
+    if (e instanceof TooLarge) throw new Error(`Backup grande demais ou corrompido (${e.message}).`);
     throw new Error('Arquivo inválido: não é um .zip.');
   }
   const raw = files['backup.json'];
@@ -75,29 +90,39 @@ export async function restoreBackup(db: Db, zip: Uint8Array): Promise<{ presets:
   if (json.format !== FORMAT || typeof json.version !== 'number') throw new Error('Este .zip não é um backup do nathcam.');
   if (json.version > VERSION) throw new Error('Backup feito por uma versão mais nova do app.');
 
-  const luts: LutRecord[] = (Array.isArray(json.luts) ? json.luts : []).map((l) => {
-    const data = files[l.file];
+  const entries = <T>(v: unknown): T[] => (Array.isArray(v) ? v.filter((x) => x && typeof x === 'object') : []);
+
+  const luts: LutRecord[] = entries<BackupLut>(json.luts).map((l) => {
+    const data = isStr(l.file) ? files[l.file] : undefined;
     const size = l.size;
-    if (!isStr(l.id) || !Number.isInteger(size) || size < 2 || size > MAX_LUT_SIDE || !isTriple(l.domainMin) || !isTriple(l.domainMax))
+    if (!isStr(l.id) || !LUT_ID.test(l.id) || !Number.isInteger(size) || size < 2 || size > MAX_LUT_SIDE || !isTriple(l.domainMin) || !isTriple(l.domainMax))
       throw new Error(`LUT inválida no backup: ${String(l.id)}`);
     if (!data || data.byteLength !== size ** 3 * 3 * 4) throw new Error(`LUT ${l.id}: dados com tamanho inesperado.`);
     return { id: l.id, size, domainMin: l.domainMin, domainMax: l.domainMax, data: data.slice().buffer as ArrayBuffer };
   });
 
-  const presets: PresetRecord[] = (Array.isArray(json.presets) ? json.presets : [])
-    .filter((p) => isStr(p?.id) && isStr(p?.name) && isStr(p?.pack))
+  // LUT local só vale se existir: no backup ou já no aparelho.
+  const knownLuts = new Set([...luts.map((l) => l.id), ...((await db.luts.toCollection().primaryKeys()) as string[])]);
+  const lutOf = (v: unknown): PresetLut | null => {
+    const l = validLut(v);
+    if (l?.src.startsWith(LOCAL_LUT_PREFIX) && !knownLuts.has(l.src.slice(LOCAL_LUT_PREFIX.length))) return null;
+    return l;
+  };
+
+  const presets: PresetRecord[] = entries<PresetRecord>(json.presets)
+    .filter((p) => isStr(p.id) && isStr(p.name) && isStr(p.pack))
     .map((p) => ({
       id: p.id,
       name: p.name,
       pack: p.pack,
       params: sanitizeParams(p.params).params,
-      lut: validLut(p.lut),
+      lut: lutOf(p.lut),
       engineVersion: typeof p.engineVersion === 'number' ? p.engineVersion : 1,
       createdAt: typeof p.createdAt === 'number' ? p.createdAt : Date.now(),
     }));
 
-  const meta: PresetMetaRecord[] = (Array.isArray(json.meta) ? json.meta : [])
-    .filter((m) => isStr(m?.id) && /^(preset|pack):/.test(m.id))
+  const meta: PresetMetaRecord[] = entries<PresetMetaRecord>(json.meta)
+    .filter((m) => isStr(m.id) && /^(preset|pack):/.test(m.id))
     .map((m) => ({ id: m.id, ...(m.favorite === true && { favorite: true }), ...(m.hidden === true && { hidden: true }) }));
 
   await db.transaction('rw', db.presets, db.luts, db.presetMeta, async () => {
