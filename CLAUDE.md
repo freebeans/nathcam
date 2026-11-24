@@ -2,7 +2,7 @@
 
 Editor de fotos PWA, estilo VSCO, centrado em presets, 100% front-end (hospedagem estática). Uso pessoal da autora; roda em iPhone (Safari) e Android (Chrome).
 
-O PRD completo está em `docs/PRD.md`. Leia a seção correspondente antes de mexer em: pipeline do motor, gestão de cor, formato de preset, armazenamento ou importação de XMP.
+O PRD completo está em `docs/prd-editor-de-fotos-pwa.md`. Leia a seção correspondente antes de mexer em: pipeline do motor, gestão de cor, formato de preset, armazenamento ou importação de XMP.
 
 ## Vocabulário
 
@@ -42,3 +42,17 @@ O PRD completo está em `docs/PRD.md`. Leia a seção correspondente antes de me
 
 - Lógica pura (parsers `.cube`/`.xmp`, resolução de camadas e herança, histórico): testes unitários.
 - Motor: testes de imagem de referência num navegador headless, comparando com tolerância. Toda mudança no shader termina com esses testes verdes; quando a mudança é intencional, regenere as referências e explique o motivo no commit.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as local markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), written as a `Status:` line in each issue file. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
