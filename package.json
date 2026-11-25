@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@jsquash/jpeg": "^1.6.0",
+    "@wasmedia/wlibraw": "^0.3.0",
     "dexie": "^4.4.7",
     "fflate": "^0.8.3",
     "libheif-js": "^1.23.5"

@@ -276,7 +276,7 @@ try {
       return [bmp.width, bmp.height];
     }, bytes.toString('base64'));
 
-  await page.locator('input[type=file][accept="image/*"]').setInputFiles(fixture('photo-heic.heic'));
+  await page.locator('input[type=file][accept^="image/*"]').setInputFiles(fixture('photo-heic.heic'));
   await page.getByRole('button', { name: 'C1', exact: true }).waitFor({ timeout: 60_000 }).catch(() => null);
   const heicDims = await canvasDims();
   check(heicDims.w > heicDims.h && Math.abs(heicDims.w / heicDims.h - 4 / 3) < 0.02, `HEIC aberto pelo libheif (${heicDims.w}x${heicDims.h})`);
@@ -295,7 +295,7 @@ try {
   await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
 
   // ---- resolução total
-  await page.locator('input[type=file][accept="image/*"]').setInputFiles(fixture('photo-24mp.jpg'));
+  await page.locator('input[type=file][accept^="image/*"]').setInputFiles(fixture('photo-24mp.jpg'));
   await page.getByRole('button', { name: 'Exportar' }).waitFor();
   await page.waitForTimeout(500);
   await page.getByRole('button', { name: 'Exportar' }).click();
@@ -320,6 +320,35 @@ try {
   await page.getByRole('tab', { name: 'Básico' }).click();
   const pastedContrast = await page.locator('.basic .slider').nth(1).locator('.value').textContent();
   check(pastedContrast === '+40', `ajuste colado chegou na foto (contraste ${pastedContrast})`);
+  await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
+
+  // ---- RAW (LibRaw em WASM, num worker)
+  await page.locator('input[type=file][accept^="image/*"]').setInputFiles(fixture('photo-raw.dng'));
+  await page
+    .waitForFunction(() => {
+      const c = document.querySelector('.viewer canvas');
+      return c && Math.abs(c.width / c.height - 1920 / 818) < 0.02;
+    }, null, { timeout: 60_000 })
+    .catch(() => null);
+  const rawDims = await canvasDims();
+  check(Math.abs(rawDims.w / rawDims.h - 1920 / 818) < 0.02, `RAW (DNG) revelado pelo LibRaw (${rawDims.w}x${rawDims.h})`);
+  if (screenshots) await page.screenshot({ path: join(screenshots, 'raw.png') });
+  await page.getByRole('button', { name: 'Exportar' }).click();
+  const rawJpeg = await exportedBytes();
+  const rawStats = await page.evaluate(async (b64) => {
+    const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'image/jpeg' }));
+    const c = new OffscreenCanvas(64, 64);
+    const ctx = c.getContext('2d');
+    ctx.drawImage(bmp, 0, 0, 64, 64);
+    const d = ctx.getImageData(0, 0, 64, 64).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) sum += d[i] + d[i + 1] + d[i + 2];
+    return { w: bmp.width, h: bmp.height, mean: sum / (d.length / 4) / 3 };
+  }, rawJpeg.toString('base64'));
+  check(rawStats.w === 1920 && rawStats.h === 818, `JPEG do RAW no tamanho da revelação (${rawStats.w}x${rawStats.h})`);
+  check(rawStats.mean > 15 && rawStats.mean < 240, `JPEG do RAW com imagem de verdade (média ${rawStats.mean.toFixed(0)})`);
+  check(rawJpeg.includes(Buffer.from('5D Mark III')), 'EXIF do DNG vai para o JPEG exportado');
+  await page.getByRole('button', { name: 'Fechar' }).click();
   await page.getByRole('button', { name: 'Voltar à biblioteca' }).click();
 
   // ---- backup .zip

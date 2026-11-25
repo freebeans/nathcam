@@ -6,6 +6,7 @@
   import { Db } from '../app/db';
   import { PresetCatalog } from '../app/catalog.svelte';
   import { PresetStore } from '../app/preset-store';
+  import { RAW_EXTENSIONS } from '../app/raw';
   import AdvancedPanel from './AdvancedPanel.svelte';
   import PasteSheet from './PasteSheet.svelte';
   import BackupSheet from './BackupSheet.svelte';
@@ -93,9 +94,12 @@
       if (rec) await openPhoto(rec);
     }
   }
+
+  // RAW costuma chegar sem tipo MIME de imagem: as extensões entram explícitas.
+  const photoAccept = ['image/*', ...RAW_EXTENSIONS.map((e) => `.${e}`)].join(',');
 </script>
 
-<input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onfiles} />
+<input bind:this={fileInput} type="file" accept={photoAccept} multiple hidden onchange={onfiles} />
 
 <div class="app">
   <header class="top">

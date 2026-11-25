@@ -12,11 +12,11 @@ Um editor de fotos web, instalável como PWA no iPhone e no Android, centrado em
 
 ## Escopo
 
-O produto cobre ajustes globais, recorte e endireitamento sobre fotos JPEG, PNG e HEIC, sem nenhum back-end.
+O produto cobre ajustes globais, recorte e endireitamento sobre fotos JPEG, PNG, HEIC e RAW, sem nenhum back-end.
 
 **Dentro:**
 
-- Abrir fotos do rolo da câmera ou de arquivos (JPEG, PNG; HEIC via libheif em WASM carregado sob demanda).
+- Abrir fotos do rolo da câmera ou de arquivos (JPEG, PNG; HEIC via libheif e RAW via LibRaw, ambos em WASM carregado sob demanda).
 - Presets com intensidade, ajustes globais em três níveis, recorte e endireitamento.
 - Biblioteca leve local, histórico persistente, copiar e colar ajustes em lote.
 - Importação de presets `.json`, LUTs `.cube` e HaldCLUT `.png`, e presets `.xmp` do Lightroom.
@@ -24,7 +24,7 @@ O produto cobre ajustes globais, recorte e endireitamento sobre fotos JPEG, PNG 
 
 **Fora (por enquanto):**
 
-- RAW (DNG, ARW, CR3 etc.).
+- Edição em 16 bits a partir do RAW (a revelação chega ao motor em 8 bits; ver Importação).
 - Ajustes locais: pincel, máscaras lineares e radiais, máscaras de sujeito.
 - Ferramentas de IA, retoque, clonagem.
 - Sincronização entre aparelhos, contas, qualquer servidor além da hospedagem estática.
@@ -151,6 +151,12 @@ O app importa quatro formatos de preset e exporta JPEG P3 com EXIF, por comparti
 
 **Imagens de entrada:** JPEG e PNG nativos; HEIC nativo no Safari e, nos outros navegadores, via libheif (WASM, \~2 MB) carregado só quando um HEIC chega (fora do pré-cache do service worker; fica em cache depois do primeiro uso). O espaço de cor do HEIC decodificado pelo libheif vem do contêiner (`colr`: CICP ou perfil ICC; P3 e BT.2020 viram Display P3, o resto sRGB); o EXIF é lido do item `Exif` do contêiner.
 
+**RAW** (DNG, ARW, CR2, CR3, NEF, RAF, ORF, RW2 e o resto do que o LibRaw abre): revelado sempre pelo LibRaw (wlibraw: WASM sem threads, \~1,5 MB, LGPL-2.1), num worker criado para cada decodificação e encerrado em seguida, para devolver a memória do heap do WASM. Vem antes da decodificação nativa, porque o Safari abre alguns RAW sozinho com a própria revelação (ou só a prévia embutida); um TIFF sem extensão que o navegador não abre também é tentado como RAW. Como o libheif, fica fora do pré-cache e entra em cache no primeiro uso. Não precisa de cross-origin isolation (o GitHub Pages não deixa configurar COOP/COEP).
+
+- **Revelação neutra:** balanço de branco da câmera, Display P3 linear em 16 bits, sem brilho automático e com reconstrução de altas luzes por mistura. Uma curva fixa leva para 8 bits com curva sRGB: +1 EV de base e um ombro exponencial a partir de 0,75 que comprime até a saturação do sensor, sem corte. O resultado entra no motor como qualquer foto; o que o RAW ganha é a revelação (balanço de branco e altas luzes vindos dos dados do sensor), não precisão extra nos ajustes.
+- **Tamanho:** sai em meia resolução (sem demosaico, 1/4 da memória) quando ela ainda cobre o tamanho pedido ou quando a resolução inteira passaria de 30 MP (ex.: ProRAW de 48 MP), que não cabe com folga na memória do Safari iOS.
+- **EXIF:** dos RAW que são TIFF por fora (DNG, CR2, NEF, ARW, PEF, ORF, RW2), monta-se um TIFF compacto com fabricante, modelo, data, a sub-IFD EXIF sem MakerNote e a GPS. CR3 e RAF ficam sem EXIF.
+
 **Presets:**
 
 | Formato | Como entra |
@@ -192,7 +198,7 @@ A v1 utilizável termina na fase 3; as fases seguintes completam o escopo deste 
 3. **Editor mínimo (v1):** abrir foto, nível 1 com intensidade, nível 2, segurar para ver o original, exportar por compartilhamento e download em resolução limitada; PWA instalável e offline.
 4. **Biblioteca:** IndexedDB, histórico persistente, recorte e endireitamento.
 5. **Avançado:** nível 3, destravar faixas HSL, importação `.cube` e `.xmp`, presets locais, edição e achatamento de preset, organização (packs, favoritos, ocultar, busca).
-6. **Fluxo de série:** copiar e colar seletivo em lote, backup `.zip`, exportação em resolução total por tiles, HEIC.
+6. **Fluxo de série:** copiar e colar seletivo em lote, backup `.zip`, exportação em resolução total por tiles, HEIC, RAW.
 
 **Critérios de aceite da v1:**
 

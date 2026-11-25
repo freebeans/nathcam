@@ -1,8 +1,12 @@
-/** Decodificação de fotos (JPEG, PNG; HEIC só onde o navegador decodifica nativamente). */
+/**
+ * Decodificação de fotos: JPEG e PNG nativos; HEIC nativo ou via libheif;
+ * RAW sempre via LibRaw (ver `raw.ts`).
+ */
 import { readExifSummary, type ExifSummary } from '../export/exif';
 import { extractAnyExif } from '../export/exif-source';
 import { heifColorSpace } from '../export/heif-container';
 import { heicToRgba, looksLikeHeic } from './heic';
+import { looksLikeRaw, looksLikeTiff, rawToRgba } from './raw';
 import { fitSize } from './recipe-edit';
 
 /**
@@ -25,13 +29,17 @@ export interface Photo {
 
 /** Decodifica aplicando a orientação do EXIF e reduzindo para caber em `maxSide`. */
 export async function decodeImage(blob: Blob, name: string, maxSide: number): Promise<ImageBitmap> {
+  const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+  // Antes do navegador: o Safari abre alguns RAW sozinho, mas com a própria
+  // revelação (ou só a prévia embutida), diferente da dos outros navegadores.
+  if (looksLikeRaw(blob.type, name, head)) return decodeRawBitmap(blob, name, maxSide);
   let probe: ImageBitmap;
   try {
     probe = await createImageBitmap(blob, { imageOrientation: 'from-image' });
   } catch {
-    const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
-    if (!looksLikeHeic(blob.type, name, head)) throw new Error(`${name}: não foi possível abrir. Use JPEG, PNG ou HEIC.`);
-    return decodeHeicBitmap(blob, name, maxSide);
+    if (looksLikeHeic(blob.type, name, head)) return decodeHeicBitmap(blob, name, maxSide);
+    if (looksLikeTiff(head)) return decodeRawBitmap(blob, name, maxSide);
+    throw new Error(`${name}: não foi possível abrir. Use JPEG, PNG, HEIC ou RAW.`);
   }
   if (Math.max(probe.width, probe.height) <= maxSide) return probe;
   const { w, h } = fitSize(probe.width, probe.height, maxSide, maxSide, maxSide);
@@ -51,6 +59,18 @@ async function decodeHeicBitmap(blob: Blob, name: string, maxSide: number): Prom
     return await createImageBitmap(data, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
   } catch (e) {
     throw new Error(`${name}: não foi possível abrir o HEIC (${e instanceof Error ? e.message : String(e)}).`);
+  }
+}
+
+/** RAW: revelado pelo LibRaw num worker, em Display P3. */
+async function decodeRawBitmap(blob: Blob, name: string, maxSide: number): Promise<ImageBitmap> {
+  try {
+    const img = await rawToRgba(new Uint8Array(await blob.arrayBuffer()), maxSide);
+    const data = new ImageData(img.data as Uint8ClampedArray<ArrayBuffer>, img.width, img.height, { colorSpace: 'display-p3' });
+    const { w, h } = fitSize(img.width, img.height, maxSide, maxSide, maxSide);
+    return await createImageBitmap(data, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
+  } catch (e) {
+    throw new Error(`${name}: não foi possível abrir o RAW (${e instanceof Error ? e.message : String(e)}).`);
   }
 }
 

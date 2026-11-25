@@ -38,12 +38,18 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,json,cube,wasm,png,svg,webmanifest}'],
         // libheif (~2 MB) só é baixado quando chega um HEIC que o navegador não
         // abre sozinho (o Safari abre); depois fica em cache para uso offline.
-        globIgnores: ['**/libheif-*.js'],
+        // O mesmo vale para o LibRaw (~1,5 MB), baixado quando chega um RAW.
+        globIgnores: ['**/libheif-*.js', '**/wlibraw-*.{js,wasm}', '**/raw.worker-*.js'],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => /\/libheif-[^/]*\.js$/.test(url.pathname),
             handler: 'CacheFirst',
             options: { cacheName: 'libheif', expiration: { maxEntries: 2 } },
+          },
+          {
+            urlPattern: ({ url }) => /\/(wlibraw-[^/]*\.(js|wasm)|raw\.worker-[^/]*\.js)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'libraw', expiration: { maxEntries: 6 } },
           },
         ],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
@@ -54,7 +60,7 @@ export default defineConfig({
     }),
   ],
   optimizeDeps: {
-    exclude: ['@jsquash/jpeg'],
+    exclude: ['@jsquash/jpeg', '@wasmedia/wlibraw'],
   },
   worker: { format: 'es' },
   test: {
