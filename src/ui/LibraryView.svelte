@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Gallery } from '../app/gallery.svelte';
   import type { PhotoRecord } from '../app/library';
+  import { appUpdate } from '../app/update.svelte';
 
   let {
     gallery,
@@ -59,6 +60,12 @@
     {/if}
   </header>
 
+  {#if appUpdate.ready && !batch && !gallery.selecting}
+    <div class="update" role="status">
+      <span>Versão nova do app disponível.</span>
+      <button class="link strong" onclick={() => appUpdate.install()}>Atualizar</button>
+    </div>
+  {/if}
   {#if batch}
     <p class="muted status">Colando ajustes… {batch.done}/{batch.total}</p>
   {/if}
@@ -104,6 +111,20 @@
 </div>
 
 <style>
+  .update {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 0 16px 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--track);
+    font-size: 13px;
+  }
+  .update .strong {
+    font-weight: 600;
+  }
   .library {
     position: absolute;
     inset: 0;

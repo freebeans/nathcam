@@ -180,7 +180,7 @@ Vite + TypeScript + Svelte 5, publicado como site estático com service worker; 
 - **Presets oficiais:** arquivos estáticos em `public/presets/*.json`, `public/luts/*.cube` e um `manifest.json` gerado no build. Adicionar preset oficial = commit + deploy. O service worker os guarda em cache para uso offline.
 - **Conversão do cssco:** script único, fora do app, que aplica cada filtro do cssco sobre uma imagem-identidade HaldCLUT num Chrome headless e grava os `.cube`.
 - **Hospedagem:** GitHub Pages (`freebeans.github.io/nathcam`), com HTTPS e deploy a cada push na main (`.github/workflows/deploy.yml`).
-- **Atualização:** automática. A versão nova é baixada em segundo plano e só passa a valer quando o app é aberto do zero, nunca recarregando uma edição aberta.
+- **Atualização:** automática. A versão nova é baixada em segundo plano (o app também procura ao voltar ao primeiro plano) e passa a valer quando o app é aberto do zero, nunca recarregando uma edição aberta. Como no iOS fechar a PWA nem sempre encerra o processo, a biblioteca mostra "Versão nova disponível · Atualizar" quando há uma versão em espera; tocar ativa e recarrega. O aviso nunca aparece no editor.
 - **Licenças:** código do app sob licença aberta; cssco é MIT (manter aviso de copyright); as LUTs do G'MIC são CC BY-SA 4.0 (atribuição em cada arquivo e em `public/licenses/`). Presets da comunidade sem licença de redistribuição não entram no repositório.
 
 ## Roadmap
