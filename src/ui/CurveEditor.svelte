@@ -16,9 +16,12 @@
   const MIN_GAP = 0.02;
   /** Arrastar além disso para fora da caixa remove o ponto. */
   const REMOVE_DIST = 0.12;
+  /** Raio de toque de um ponto, em px de tela (dedo, não mouse). */
+  const HIT_PX = 28;
 
   let channel = $state<CurveChannel>('luma');
   let svg: SVGSVGElement;
+  let pad: HTMLDivElement;
   let drag: { index: number; key: string } | null = null;
   let lastTap = { index: -1, t: 0 };
 
@@ -42,16 +45,20 @@
   }
 
   function down(e: PointerEvent) {
-    svg.setPointerCapture(e.pointerId);
     const [x, y] = pos(e);
     const key = `curve-${channel}-${++gestures}`;
-    // Ponto mais próximo (em tela), se estiver perto o bastante.
+    // Ponto mais próximo (em px de tela), se estiver perto o bastante. A área de
+    // toque passa da borda da caixa: os extremos ficam nos cantos.
+    const r = svg.getBoundingClientRect();
     let best = -1;
-    let bestD = 0.06;
+    let bestD = HIT_PX;
     points.forEach(([px, py], i) => {
-      const d = Math.hypot(px - x, py - y);
+      const d = Math.hypot((px - x) * r.width, (py - y) * r.height);
       if (d < bestD) [best, bestD] = [i, d];
     });
+    const inside = x >= 0 && x <= 1 && y >= 0 && y <= 1;
+    if (best < 0 && !inside) return;
+    pad.setPointerCapture(e.pointerId);
     if (best >= 0) {
       const now = performance.now();
       const interior = best > 0 && best < points.length - 1;
@@ -104,10 +111,9 @@
     {/each}
     <button class="link reset" disabled={!editor.curve(channel)} onclick={() => commit([...IDENTITY_CURVE])}>Zerar</button>
   </div>
-  <svg
-    bind:this={svg}
-    viewBox="0 0 1 1"
-    preserveAspectRatio="none"
+  <div
+    class="hit"
+    bind:this={pad}
     role="application"
     aria-label="Curva {LABELS[channel]}: toque para adicionar ponto, arraste para fora para remover"
     onpointerdown={down}
@@ -115,6 +121,7 @@
     onpointerup={up}
     onpointercancel={up}
   >
+  <svg bind:this={svg} viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
     {#each [0.25, 0.5, 0.75] as g (g)}
       <line x1={g} y1="0" x2={g} y2="1" class="grid" />
       <line x1="0" y1={g} x2="1" y2={g} class="grid" />
@@ -125,6 +132,7 @@
       <circle cx={x} cy={1 - y} r="0.025" style:fill={COLORS[channel]} />
     {/each}
   </svg>
+  </div>
 </div>
 
 <style>
@@ -135,6 +143,9 @@
     align-items: center;
   }
   .channels {
+    /* Fica por cima da margem de toque da caixa. */
+    position: relative;
+    z-index: 1;
     display: flex;
     gap: 8px;
     align-items: center;
@@ -154,11 +165,17 @@
     margin-left: 8px;
     color: var(--muted);
   }
+  /* Margem de toque em volta da caixa, para pegar os pontos dos cantos. */
+  .hit {
+    padding: 20px;
+    margin: -20px;
+    touch-action: none;
+  }
   svg {
+    display: block;
     width: min(70vw, 240px);
     aspect-ratio: 1;
     background: rgba(255, 255, 255, 0.04);
-    touch-action: none;
     overflow: visible;
   }
   .grid {
